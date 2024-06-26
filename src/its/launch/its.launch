@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="namespace" default="sits_tactip"/>
+	<arg name="algorithm" default="standard"/>
+
+	<!--group ns="$(arg namespace)"-->
+		<rosparam file="$(find its)/config/soft_its_params.yaml" command="load" />
+		<!--include file="$(find netft_rdt_driver)/launch/ft_sensor.launch"/-->
+		<node name="its_node" pkg="its" type="its_node" output="screen" if ="$(eval arg('algorithm') == 'standard')"/>
+		<node name="soft_its_node" pkg="its" type="soft_its_node" output="screen" if ="$(eval arg('algorithm') == 'soft')"/>
+		<node name="soft_its_viz" pkg="its" type="soft_its_viz" output="screen" />
+	<!--/group-->
+
+</launch>

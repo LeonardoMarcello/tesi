@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="namespace" default="sits_tactip"/>
+	<arg name="algorithm" default="gaussian"/>
+
+	<!--group ns="$(arg namespace)"-->
+		<rosparam file="$(find its)/config/tactip_params.yaml" command="load" />    
+		<!--<include file="$(find tactip_driver)/launch/tactip_camera.launch">
+    		<arg name="video_device_param_name" value="usb_cam/video_device/"/>
+		    <arg name="video_device_param_value" value="/dev/video2"/>
+		</include>-->
+		<!--node name="tactip_contact_detection" pkg="its" type="tactip_contact_detection.py" output="screen" /-->
+		<node name="tactip_markers_tracker" pkg="its" type="tactip_markers_tracker.py" output="screen" />
+
+		<node name="tactip_gaussian_kernel" pkg="its" type="tactip_gaussian_kernel.py" output="screen"  if ="$(eval arg('algorithm') == 'gaussian')"/>
+		<node name="tactip_voronoi" pkg="its" type="tactip_voronoi.py" output="screen"  if ="$(eval arg('algorithm') == 'voronoi')"/>
+
+		<node name="tactip_viz" pkg="its" type="its_tactip_viz.py" output="screen" />
+	<!--/group-->
+
+</launch>

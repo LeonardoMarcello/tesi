@@ -157,7 +157,8 @@ class TacTipGaussianKernel:
         density_img = cv2.filter2D(src=TacTip_area, ddepth=cv2.CV_32F, kernel=kernel)
 
         # Normalize on a scale factor
-        scale_factor = shape[0]*shape[1]
+        #scale_factor = shape[0]*shape[1]
+        scale_factor = markers.shape[0]*100
         density = scale_factor * np.array(density_img.T, dtype=float)
 
         t_end = rospy.Time.now().to_nsec()*1e-6
@@ -212,10 +213,10 @@ class TacTipGaussianKernel:
         # Density variation
         DeltaZm = density_at_rest - density
         # integrate
-        integral = np.nansum(DeltaZm[R].flatten())*resolution # <-- ori
-        area = np.sum(np.array(R,dtype = int))*resolution
+        integral = np.nansum(DeltaZm[R].flatten())/100*resolution # mm2pxl = 10
+        #area = np.sum(np.array(R,dtype = int))*resolution
 
-        return integral/area
+        return integral#/area
         
     def density2deformation(self, integral, params):
         """

@@ -170,6 +170,7 @@ int main(int argc, char **argv){
           sol_msg.Ft.x = solution.ft(0); sol_msg.Ft.y = solution.ft(1); sol_msg.Ft.z = solution.ft(2);
           sol_msg.T = solution.t;
           sol_msg.D = psa_at_rest[0]-ITS.fingertip.model.principalAxisCoeff[0];
+          sol_msg.convergence_time = (stop_time.nsec - start_time.nsec)/1e6;
 
           solution_pub.publish(sol_msg);
         }

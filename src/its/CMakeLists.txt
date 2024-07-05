@@ -177,6 +177,7 @@ catkin_install_python(PROGRAMS
    scripts/tactip_markers_tracker.py
    scripts/tactip_voronoi.py
    scripts/tactip_gaussian_kernel.py
+   scripts/data_logger.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

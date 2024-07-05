@@ -7,3 +7,5 @@ float64 Fn					# amplitude [N] of normal force
 geometry_msgs/Vector3 Ft    # tangential force [N]
 float64 T					# amplitude [Nmm] of local torque around normal
 float64 D					# deformation [mm] of fingertip surfaces along normal
+
+float64 convergence_time	# convergence time [ms]

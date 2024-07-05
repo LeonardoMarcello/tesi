@@ -88,8 +88,10 @@ class RobotController(object):
         self.ee_link = ee_link
 
         # Commentate
-        self.save_data = rospy.ServiceProxy('save_data', Empty)                #service
-        self.stop_save_data = rospy.ServiceProxy('stop_save_data', Empty)      #service
+        self.save_data = rospy.ServiceProxy('save_data', Empty)                     # Measurement
+        self.stop_save_data = rospy.ServiceProxy('stop_save_data', Empty)           
+        self.save_data_its = rospy.ServiceProxy('soft_csp/save_data', Empty)        # Soft Contact Sensing
+        self.stop_save_data_its = rospy.ServiceProxy('soft_csp/stop_data', Empty)   
 
         #self.ft_client = rospy.ServiceProxy('/ft_sensor/bias_cmd', String_cmd)
         self.ft_client_franka = rospy.ServiceProxy('/ft_sensor_franka/bias_cmd', String_cmd)
@@ -249,7 +251,7 @@ def main():
             # Commentate <----
             #robot_controller_node.set_bias()
             #resp_ft = robot_controller_node.ft_client(robot_controller_node.srv_ft)
-            resp = robot_controller_node.save_data()
+            resp = robot_controller_node.save_data()             # <----- Start log Measurement
             # ##
 
             ########################################
@@ -271,8 +273,18 @@ def main():
             table.header = header
             robot_controller_node.move_group_robot.set_max_velocity_scaling_factor(0.01)
             robot_controller_node.go_to_pose(table)[0:1]
-            resp = robot_controller_node.stop_save_data()   # Commentate
+            resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
             robot_controller_node.move_group_robot.set_max_velocity_scaling_factor(1)
+
+            ########################################
+            # (LEO) funzione che esegue il log per l'ITS
+            input("Press `Enter` to start ITS solver log")
+            resp = robot_controller_node.save_data()                  # <----- Start log Measurement
+            resp = robot_controller_node.save_data_its()              # <----- Start log ITS solution
+            rospy.sleep(10)                                           #             | sleep in seconds
+            resp = robot_controller_node.stop_save_data_its()         # <----- End log ITS solution
+            resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
+
             ################################
             # IO (PAOLO) HO AGGIUNTO LA RIGA DI CODICE SOTTO
             input("Press `Enter` to go back")

@@ -51,10 +51,10 @@ def all_close(goal, actual, tolerance):
             if abs(actual[index] - goal[index]) > tolerance:
                 return False
 
-    elif type(goal) is geometry_msgs.msg.PoseStamped:
+    elif type(goal) is PoseStamped:
         return all_close(goal.pose, actual.pose, tolerance)
 
-    elif type(goal) is geometry_msgs.msg.Pose:
+    elif type(goal) is Pose:
         x0, y0, z0, qx0, qy0, qz0, qw0 = pose_to_list(actual)
         x1, y1, z1, qx1, qy1, qz1, qw1 = pose_to_list(goal)
         d = dist((x1, y1, z1), (x0, y0, z0))

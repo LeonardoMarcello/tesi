@@ -1,4 +1,5 @@
 #include "ros/ros.h"
+#include <tf/transform_broadcaster.h>
 #include "geometry_msgs/WrenchStamped.h"
 #include "its_msgs/SoftContactSensingProblemSolution.h"
 #include "its/IntrinsicTactileSensing.hpp"
@@ -69,6 +70,17 @@ int main(int argc, char **argv){
   double force_th, eps, stop_th;
   bool verbose;
   ContactSensingProblemMethod solver;
+
+  // Transform object and transform broadcaster
+  static tf::TransformBroadcaster br;
+  tf::Transform transform;
+  /*
+  transform.setOrigin( tf::Vector3(msg->x, msg->y, 0.0) );
+  tf::Quaternion q;
+  q.setRPY(0, 0, msg->theta);
+  transform.setRotation(q);
+  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "turtle_name"));
+  */
 
 
   // Declaring parameters
@@ -173,6 +185,13 @@ int main(int argc, char **argv){
           sol_msg.convergence_time = (stop_time.nsec - start_time.nsec)/1e6;
 
           solution_pub.publish(sol_msg);
+
+          // broadcast tf
+          transform.setOrigin( tf::Vector3(solution.PoC(0)/1000.0, solution.PoC(1)/1000.0, solution.PoC(2)/1000.0) );
+          tf::Quaternion q;
+          q.setRPY(0, 0, 0);
+          transform.setRotation(q);
+          br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), ITS.fingertip.id, "PoC"));
         }
         else{
           

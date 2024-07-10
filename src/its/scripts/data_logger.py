@@ -17,19 +17,21 @@ class DataLogger:
         self.csv_filename_its = 'soft_its_data.csv'
         self.csv_file_its = open(self.csv_filename_its, 'w')
         self.csv_writer_its = csv.writer(self.csv_file_its)
-        self.csv_writer_its.writerow(['Experiment', 'force [N]', 'CC_error [mm]', 'Alpha [rad]', 'Elapsed Time [ms]'])
+        self.csv_writer_its.writerow(['Experiment', 'Indentation [N]', 'force [N]', 'CC_error [mm]', 'Alpha [rad]', 'Elapsed Time [ms]', 'Solver'])
         
         # Initialize service
         self.register = False                                                   # Enable log
 
         self.real_theta = 0                                                     # <---- Real Ellipsoid Inclination [rad]
         self.real_cc = np.array([0,0,0],dtype=float)                            # <---- Real Contact Centroid in {B} [mm]
+        self.indentation = 0                                                    # <---- Real Indentation [mm]
 
 
         self.forces = []                                                        # Force measurment norm [N]
         self.e_cc = []                                                          # Contac Centroid error sarray [mm]
         self.theta = []                                                         # CC solution angles array [rad]
         self.times = []                                                         # Times to convergence array [ms]
+        self.slover = ""                                                        # ITS solver name
 
         self.experiment = 0                                                     # Num of experiment
         self.save = rospy.Service('soft_csp/save_data', Empty, self.handle_save_data)
@@ -46,6 +48,7 @@ class DataLogger:
         self.register = True
         print('=====', self.register)
         self.experiment = rospy.get_param('/num_exp')
+        self.solver = rospy.get_param('soft_its/algorithm/method/name')
         rospy.loginfo("Retrieved parameter: %d", self.experiment)
         
         return EmptyResponse()
@@ -59,9 +62,10 @@ class DataLogger:
         mean_e = np.mean(self.e_cc)
         mean_theta = np.mean(self.theta)
         mean_time = np.mean(self.times)
+        name = self.solver
 
         # store
-        row = [self.experiment, mean_f, mean_e, mean_theta, mean_time]
+        row = [self.experiment, self.indentation, mean_f, mean_e, mean_theta, mean_time, name]
         self.csv_writer_its.writerow(row)
         
         # reset
@@ -91,7 +95,7 @@ class DataLogger:
             self.times.append(time)
     
     def ft_callback(self, data):
-        # Save Soft Contact Sensing Problem Solution
+        # Save Force measurement
         if self.register == True:
             # Contact Centroid error
             f = np.array([data.wrench.force.x,data.wrench.force.y,data.wrench.force.z])

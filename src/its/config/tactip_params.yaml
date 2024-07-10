@@ -16,34 +16,43 @@ tactip:
             -8.9320087280166040e-04,
             -1.4789370573431722e-02]
 
-    markers: 127                        # Number of markers in a TacTip frame
-    #markers: 110
+    #markers: 127                        # Number of markers in a TacTip frame
+    markers: 51 #105
 
 image_processing:                   # Params for Image Processing
     # ############
     # - TacTip
     # ############
-    shape:                          # Reshaped image dimension
-        width: 640
-        height: 480
-    mask: [310,240,190]             # Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: None)  
-    blur_kernel_size: [5,5]         # Image noise filtering (Gaussian) kernel size   
-    blob_recog:                     # Determinant of Heussian Blob's recogition params (TacTip: 6.5,8.5,0.003, DigiTac: ??)
-        min_sigma: 6.5              #   - minimum blob width
-        max_sigma: 8.5              #   - maximum blob width
-        threshold: 0.001            #   - intensity changes threshold
-    # ##################
-    # - DigiTac v1.5
-    # ##################
     #shape:                          # Reshaped image dimension
     #    width: 640
     #    height: 480
-    #mask: None                      # Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: None)  
-    #blur_kernel_size: [7,7]         # Image noise filtering (Gaussian) kernel size   
+    #mask: [310,240,190]             # Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: None)  
+    #blur_kernel_size: [5,5]         # Image noise filtering (Gaussian) kernel size   
     #blob_recog:                     # Determinant of Heussian Blob's recogition params (TacTip: 6.5,8.5,0.003, DigiTac: ??)
-    #    min_sigma: 10.5              #   - minimum blob width
-    #    max_sigma: 11.5              #   - maximum blob width
-    #    threshold: 0.005            #   - intensity changes threshold
+    #    min_sigma: 6.5              #   - minimum blob width
+    #    max_sigma: 8.5              #   - maximum blob width
+    #    threshold: 0.001            #   - intensity changes threshold
+
+    # ##################
+    # - DigiTac v1.5
+    # ##################
+    shape:                          # Reshaped image dimension
+        width: 640
+        height: 480
+    mask: None #[310,240,190]             # Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: None)  
+    blur_kernel_size: 5             # Image noise filtering (Gaussian) kernel size  
+
+    circle_recog:                   # Hough Gradient Circle recogition params
+        min_radius: 7               #   - min circle radius
+        max_radius: 12              #   - min circle radius
+        param1: 250                 #   - Upper threshold for the internal Canny edge detecto
+        param2: 8                   #   - Threshold for center detection
+        min_distance: 27            #   - min distance of adjacent circle
+
+    blob_recog:                     # Determinant of Heussian Blob's recogition params (TacTip: 6.5,8.5,0.003, DigiTac: ??)
+        min_sigma: 10.5             #   - minimum blob width
+        max_sigma: 11.5             #   - maximum blob width
+        threshold: 0.005            #   - intensity changes threshold
 
 markers_density:            # Params for Gaussian Kernel Algorithm
     # ############
@@ -51,7 +60,7 @@ markers_density:            # Params for Gaussian Kernel Algorithm
     # ############
     rate: 50                # rate [Hz]  
     gaussian_kernel:        # Density Estimator Gaussian Kernel 
-        h: 15               #   - Density Estimator Gaussian Kernel std. dev, (TacTip: 15, DigiTac: 30)  
+        h: 30               #   - Density Estimator Gaussian Kernel std. dev, (TacTip: 15, DigiTac: 30)  
                             #     (it should be close to mean distance in pixels between adjacent markers)                                    
         verbose: True       #   - Print kernel estimation elapsed time 
     resolution: 1           # Resolution of pixels for Density estimation

@@ -181,7 +181,8 @@ class ITSTacTipViz:
             self.heatmap = plt.imshow(Zm, cmap=cm.coolwarm, interpolation='nearest')
             plt.colorbar(self.heatmap, shrink=0.5, aspect=5)
         
-        plt.clim(0, 1)
+        plt.clim(0, .04)
+        #plt.clim(0, 1)
         #plt.clim(0, 4)
         #plt.clim(0, 550)
 

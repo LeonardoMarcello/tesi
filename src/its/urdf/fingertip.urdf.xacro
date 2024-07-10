@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="fingertip">
+
+  <!-- Fingertip -->
+  <link name="TacTip"/>
+  <joint name="fingertip_to_brush" type="fixed">
+      <parent link="panda_link8"/>
+      <child link="TacTip"/>
+      <origin  xyz="0.0 -0.095 0.095" rpy="0.0 1.57 0.0"/> 
+  </joint>
+  <!-- Fingertip -->
+</robot>

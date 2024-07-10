@@ -24,22 +24,23 @@ class TacTipMarkersTracker:
         # M:                    number of markers in a TacTip frame (TacTip:127, DigiTac: 110)
         # mask:                 Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: bho)
         # blur_kernel_size:     Image noise filtering (Gaussian) kernel size   
-        # circle_recog:         Hough Gradient Circle recogition params (min_radius, max_radius, param1, param2, min_distance)
+        # blob_recog:           Determinant of Heussian Blob's recogition params (min_sigma, max_sigma, threshold) 
         #                       (Ori: 6.5,8.5,0.003, Fingertip: bho)
         self.M =  rospy.get_param("tactip/markers", 127)
         w = rospy.get_param("image_processing/shape/width", 640) 
         h = rospy.get_param("image_processing/shape/height", 480) 
-        
-        self.mask = rospy.get_param("image_processing/mask", [320,240,240])
-        self.blur_kernel_size = rospy.get_param("image_processing/blur_kernel_size", 5)
-        min_radius =  rospy.get_param("image_processing/circle_recog/min_radius", 7)  
-        max_radius =  rospy.get_param("image_processing/circle_recog/max_radius", 12)  
-        param1 =  rospy.get_param("image_processing/circle_recog/param1", 250)  
-        param2 =  rospy.get_param("image_processing/circle_recog/param2", 8)  
-        min_distance =  rospy.get_param("image_processing/circle_recog/min_distance", 27)  
+        #self.mask = rospy.get_param("image_processing/mask", "None")
+        #self.blur_kernel_size = tuple(rospy.get_param("image_processing/blur_kernel_size", [11,11]))
+        #min_sigma =  rospy.get_param("image_processing/blob_recog/min_sigma", 11)  
+        #max_sigma =  rospy.get_param("image_processing/blob_recog/max_sigma", 12.5)  
+        self.mask = rospy.get_param("image_processing/mask", [310,240,195])
+        self.blur_kernel_size = tuple(rospy.get_param("image_processing/blur_kernel_size", [5,5]))
+        min_sigma =  rospy.get_param("image_processing/blob_recog/min_sigma", 6.5)  
+        max_sigma =  rospy.get_param("image_processing/blob_recog/max_sigma", 8.5)  
+        blob_thresh =  rospy.get_param("image_processing/blob_recog/threshold", 0.001)
         self.rshape = (w,h)
         if(self.mask=="None"): self.mask=None
-        self.markers_detection_params = (min_radius, max_radius, param1, param2, min_distance)
+        self.blob_recog = (min_sigma, max_sigma, blob_thresh)
         
         # Variables
         self.markers  = None          # Markers Positions as numpy array
@@ -97,7 +98,7 @@ class TacTipMarkersTracker:
         # Mask outer Tactip Frame
         if (mask):
             mask = np.zeros_like(gray_img)
-            mask = cv2.circle(mask, (mask_u_center, mask_v_center), mask_radius, (255,255,255), -1)
+            mask = cv2.circle(mask, (mask_u_center,mask_v_center), mask_radius, (255,255,255), -1)
             masked_img = cv2.bitwise_and(gray_img, mask)
         else:
             masked_img = gray_img.copy()
@@ -105,24 +106,21 @@ class TacTipMarkersTracker:
         # Gaussian Blur filter  
         #blur_img = cv2.GaussianBlur(masked_img,gaussian_kernel_size,0)
 
-        # Median Blur filter  
-        blur_img = cv2.medianBlur(masked_img,gaussian_kernel_size,0)
-
         #create pin mask
-        #masked_img = cv2.cvtColor(masked_img, cv2.COLOR_GRAY2RGB)
-        #low_gray = np.array([20, 20, 20])
-        #upp_gray = np.array([65, 65, 65])
-        #mask_gray = cv2.inRange(masked_img, low_gray, upp_gray)
+        masked_img = cv2.cvtColor(masked_img, cv2.COLOR_GRAY2RGB)
+        low_gray = np.array([20, 20, 20])
+        upp_gray = np.array([65, 65, 65])
+        mask_gray = cv2.inRange(masked_img, low_gray, upp_gray)
 
         #apply mask to select pin 
-        #frame_base_pin = cv2.bitwise_and(masked_img,masked_img, mask=mask_gray)
-        #frame_base_gray = cv2.cvtColor(frame_base_pin, cv2.COLOR_BGR2GRAY)
-        #(thresh, frame_base_bw) = cv2.threshold(frame_base_gray, 1, 235, cv2.THRESH_BINARY_INV)
+        frame_base_pin = cv2.bitwise_and(masked_img,masked_img, mask=mask_gray)
+        frame_base_gray = cv2.cvtColor(frame_base_pin, cv2.COLOR_BGR2GRAY)
+        (thresh, frame_base_bw) = cv2.threshold(frame_base_gray, 1, 235, cv2.THRESH_BINARY_INV)
         
-        return blur_img
+        return frame_base_bw
 
 
-    def markerDetection(self, src, params):
+    def markerDetection(self, src, min_sigma=6.5, max_sigma=8.5, threshold=0.003):
         """
         markerDetection: 
             Detects TacTip Markers' centroids.
@@ -134,44 +132,32 @@ class TacTipMarkersTracker:
         # markers = blobs_doh[:,[1, 0]]
 
         # Detect by OpenCv contours
-        #contours, hierarchy = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        #area_min = 30
-        #area_max = 130
-        #radius = 1
-        #markers = np.empty((0,2),dtype=np.float32)
-        #cX_old=-radius
-        #cY_old = -radius
-        #for i in range(0, len(contours)):
-        #    c = contours[i]
-        #    area = cv2.contourArea(c)
-        #    if area >= area_min and area < area_max:  # select dimension of pins area
-        #        moments = cv2.moments(c)
-        #        # calculate x,y coordinate of center
-        #        if moments["m00"] != 0:
-        #            cX = int(moments["m10"] / moments["m00"])
-        #            cY = int(moments["m01"] / moments["m00"])
-        #        else:  # avoid division by zero
-        #            cX, cY = 0, 0
-        #         
-        #        if (cX > cX_old + radius or cX < cX_old - radius) or \
-        #                (cY > cY_old + radius or cY < cY_old - radius):  
-        #            # avoid contours that do not define a pin
-        #            coord = np.array([cX, cY], dtype=np.float32)
-        #            markers = np.vstack((markers,coord))
-        #        cX_old = cX
-        #        cY_old = cY
-        
-        
-        # Detect by OpenCv Circle
-        min_radius = params[0]
-        max_radius = params[1]
-        param1 = params[2]
-        param2 = params[3]
-        min_distance = params[4]
-        circles = np.array(cv2.HoughCircles(src, cv2.HOUGH_GRADIENT, 1, min_distance,
-                                param1=param1, param2=param2,
-                                minRadius=min_radius, maxRadius=max_radius))
-        markers = circles[0,:,0:2]
+        contours, hierarchy = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        area_min = 30
+        area_max = 130
+        radius = 1
+        markers = np.empty((0,2),dtype=np.float32)
+        cX_old=-radius
+        cY_old = -radius
+        for i in range(0, len(contours)):
+            c = contours[i]
+            area = cv2.contourArea(c)
+            if area >= area_min and area < area_max:  # select dimension of pins area
+                moments = cv2.moments(c)
+                # calculate x,y coordinate of center
+                if moments["m00"] != 0:
+                    cX = int(moments["m10"] / moments["m00"])
+                    cY = int(moments["m01"] / moments["m00"])
+                else:  # avoid division by zero
+                    cX, cY = 0, 0
+                 
+                if (cX > cX_old + radius or cX < cX_old - radius) or \
+                        (cY > cY_old + radius or cY < cY_old - radius):  
+                    # avoid contours that do not define a pin
+                    coord = np.array([cX, cY], dtype=np.float32)
+                    markers = np.vstack((markers,coord))
+                cX_old = cX
+                cY_old = cY
         return markers
     
     ##################
@@ -200,7 +186,8 @@ class TacTipMarkersTracker:
                                                         mask_radius=self.mask[2],mask_u_center=self.mask[0],mask_v_center=self.mask[1])
                     
                 # 3) Markers detection (elap time ca 20 ms)
-                self.markers = self.markerDetection(processed_image, self.markers_detection_params) 
+                self.markers = self.markerDetection(processed_image,
+                                                    self.blob_recog[0],self.blob_recog[1],self.blob_recog[2]) 
                 M = self.markers.shape[0]
                 if (self.M is None):
                     self.M = M

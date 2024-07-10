@@ -102,8 +102,7 @@ class TacTipGaussianKernel:
         markers = self.markers.copy()
         
         # 2) Density Estim
-        self.gkd = self.gaussianKernelDensityFit(markers, h = self.h)
-        self.density_at_rest = self.gaussianKernelDensityEvaluation(self.gkd,shape=self.rshape,resolution=self.resolution,verbose=True)
+        self.density = self.gaussianKernelDensityEstimation(markers, h=self.h, shape=self.rshape,resolution=self.resolution, verbose=self.verbose)
         rospy.loginfo("New density at rest setted")
         return EmptyResponse()
     
@@ -156,9 +155,11 @@ class TacTipGaussianKernel:
         # Evaluate Convolution
         density_img = cv2.filter2D(src=TacTip_area, ddepth=cv2.CV_32F, kernel=kernel)
 
-        # Normalize on a scale factor
+        # Normalize on a scale factor (M*mm2pixel)
         #scale_factor = shape[0]*shape[1]
-        scale_factor = markers.shape[0]*100
+        #scale_factor = markers.shape[0]*100    # TacTip
+        scale_factor = markers.shape[0]*15*15     # DigiTac
+
         density = scale_factor * np.array(density_img.T, dtype=float)
 
         t_end = rospy.Time.now().to_nsec()*1e-6

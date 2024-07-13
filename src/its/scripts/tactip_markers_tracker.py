@@ -22,15 +22,16 @@ class TacTipMarkersTracker:
         
         # Parameters
         # M:                    number of markers in a TacTip frame (TacTip:127, DigiTac: 110)
-        # mask:                 Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: bho)
+        # mask:                 Image mask type. None, circle, polygon
+        #                       (u,v,radius), (TacTip: 925,540,420, DigiTac: bho)
         # blur_kernel_size:     Image noise filtering (Gaussian) kernel size   
         # circle_recog:         Hough Gradient Circle recogition params (min_radius, max_radius, param1, param2, min_distance)
         #                       (Ori: 6.5,8.5,0.003, Fingertip: bho)
-        self.M =  rospy.get_param("tactip/markers", 127)
+        self.M =  rospy.get_param("tactip/markers", None)
         w = rospy.get_param("image_processing/shape/width", 640) 
         h = rospy.get_param("image_processing/shape/height", 480) 
         
-        self.mask = rospy.get_param("image_processing/mask", [320,240,240])
+        self.mask = rospy.get_param("image_processing/mask", "polygon")
         self.blur_kernel_size = rospy.get_param("image_processing/blur_kernel_size", 5)
         min_radius =  rospy.get_param("image_processing/circle_recog/min_radius", 7)  
         max_radius =  rospy.get_param("image_processing/circle_recog/max_radius", 12)  
@@ -38,14 +39,15 @@ class TacTipMarkersTracker:
         param2 =  rospy.get_param("image_processing/circle_recog/param2", 8)  
         min_distance =  rospy.get_param("image_processing/circle_recog/min_distance", 27)  
         self.rshape = (w,h)
-        if(self.mask=="None"): self.mask=None
         self.markers_detection_params = (min_radius, max_radius, param1, param2, min_distance)
         
         # Variables
-        self.markers  = None          # Markers Positions as numpy array
-        self.bridge = CvBridge()      # Ros to OpenCV Image Converter
-        self.image = None             # Current Raw TacTip Image
-        self.image_stamp = None       # Current Raw TacTip Image timestamp
+        self.markers  = None                        # Markers Positions as numpy array
+        self.colors = 255*np.random.rand(127,3)     # Markers centroid visualise color
+        self.bridge = CvBridge()                    # Ros to OpenCV Image Converter
+        self.image = None                           # Current Raw TacTip Image
+        self.old_image = None                       # Last Raw TacTip Image (used in Optic Flow evale)
+        self.image_stamp = None                     # Current Raw TacTip Image timestamp
 
 
         # Subscriber to TacTip image data
@@ -72,7 +74,12 @@ class TacTipMarkersTracker:
         tactip_callback: 
             Store raw TacTip image.
         """            
-        # 1) Store raw image
+        # 1) store old raw frame
+        if self.image is not None:
+            self.old_image = self.image.copy()
+        else:
+            self.old_image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='rgb8')
+        # 2) Store new raw frame
         self.image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='rgb8')
         self.image_stamp = image_msg.header.stamp
 
@@ -89,24 +96,42 @@ class TacTipMarkersTracker:
             return elaborated image
         """
         # resize image
-        resized_img = cv2.resize(src, resize_shape)
+        processed_frame = cv2.resize(src, resize_shape)
+
+        # blur
+        processed_frame = cv2.medianBlur(processed_frame, 5)
 
         # GrayScaling image
-        gray_img = cv2.cvtColor(resized_img, cv2.COLOR_RGB2GRAY)
+        processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_RGB2GRAY)
 
         # Mask outer Tactip Frame
-        if (mask):
-            mask = np.zeros_like(gray_img)
+        if (mask=="circle"):
+            mask = np.zeros_like(processed_frame)
+            mask_u_center = 320
+            mask_v_center = 240
+            mask_radius = 240
             mask = cv2.circle(mask, (mask_u_center, mask_v_center), mask_radius, (255,255,255), -1)
-            masked_img = cv2.bitwise_and(gray_img, mask)
+            processed_frame = cv2.bitwise_and(processed_frame, mask)
+        elif (mask=="polygon"):
+            borders = np.array([[144, 456],
+                        [476, 456],
+                        [605, 365],
+                        [615,117],
+                        [495, 4],
+                        [161, 1],
+                        [44, 108],
+                        [34, 348]])
+            mask = np.zeros_like(processed_frame)
+            mask = cv2.fillConvexPoly(mask, borders, (255, 255, 255))
+            processed_frame = cv2.bitwise_and(processed_frame, mask)
         else:
-            masked_img = gray_img.copy()
+            processed_frame = processed_frame.copy()
 
         # Gaussian Blur filter  
         #blur_img = cv2.GaussianBlur(masked_img,gaussian_kernel_size,0)
 
         # Median Blur filter  
-        blur_img = cv2.medianBlur(masked_img,gaussian_kernel_size,0)
+        #blur_img = cv2.medianBlur(masked_img,gaussian_kernel_size,0)
 
         #create pin mask
         #masked_img = cv2.cvtColor(masked_img, cv2.COLOR_GRAY2RGB)
@@ -119,13 +144,13 @@ class TacTipMarkersTracker:
         #frame_base_gray = cv2.cvtColor(frame_base_pin, cv2.COLOR_BGR2GRAY)
         #(thresh, frame_base_bw) = cv2.threshold(frame_base_gray, 1, 235, cv2.THRESH_BINARY_INV)
         
-        return blur_img
+        return processed_frame
 
 
     def markerDetection(self, src, params):
         """
         markerDetection: 
-            Detects TacTip Markers' centroids.
+            Detects TacTip Markers' centroids in a frame.
             returns a numpy array where markers[i,0] = u-coordinate of i-th marker
                                         markers[i,1] = v-coordinate of i-th marker
         """
@@ -173,34 +198,101 @@ class TacTipMarkersTracker:
                                 minRadius=min_radius, maxRadius=max_radius))
         markers = circles[0,:,0:2]
         return markers
+
+    def markerDetectionManual(self,src, params):
+        """
+        markerDetectionManual: 
+            Detects TacTip Markers' centroids routine with manual mode. It first use automatic methods. 
+            Then it opens a windows to select/remove points.
+                > left click:    Add centroid point
+                > right click:   Remove nearest centroid
+                > q:             Quit manual selection windows
+        """
+        markers = self.markerDetection(src,params)
+        
+        def manual_select_points_callback(event, x, y, flags, param):
+            nonlocal markers
+            if event == cv2.EVENT_LBUTTONDOWN:
+                markers = np.vstack((markers, np.array([x,y],dtype=np.float32)))
+                print("Adding markers")
+            if event == cv2.EVENT_RBUTTONDOWN:
+                clicked = np.repeat(np.array([[x,y]]), markers.shape[0],axis = 0)
+                distances = (markers[:,0]-clicked[:,0])*(markers[:,0]-clicked[:,0]) + (markers[:,1]-clicked[:,1])*(markers[:,1]-clicked[:,1])
+                idx = distances.argmin()
+                markers = np.delete(markers,idx,axis=0)
+                print("Removing marker at index " + str(idx))
+
+
+        cv2.imshow('Select Markers', src)
+        cv2.setMouseCallback('Select Markers', manual_select_points_callback)
+        cv2.waitKey(1)
+        while(1):
+            markers_img = src.copy()
+            markers_img_rgb = cv2.cvtColor(markers_img,cv2.COLOR_GRAY2RGB)
+            for i in range(markers.shape[0]):
+                x = markers[i, 0]
+                y = markers[i, 1]
+                markers_img = cv2.circle(markers_img_rgb, (int(x), int(y)), 5, self.colors[i,:], -1)
+            cv2.imshow('Select Markers',markers_img_rgb)
+            if cv2.waitKey(10) & 0xFF == ord('q'):
+                cv2.destroyWindow('Select Markers')
+                break
+        return markers
     
+    def markersTracking(self, old_gray_frame, gray_frame, old_markers):
+        """
+        markersTracking: 
+            Track TacTip Markers' centroids by using Sparse Optic Flow on last markers known position between
+            two consecutive frames.
+            returns a numpy array where markers[i,0] = u-coordinate of i-th marker
+                                        markers[i,1] = v-coordinate of i-th marker
+        """
+        criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,  # Termination method
+                10,                                                 # max count
+                0.03)                                               # epsilon
+
+        parameter_lucas_kanade = dict(winSize=(15,15),
+                                    maxLevel=2,
+                                    criteria=criteria)
+
+        new_points, status, errors = cv2.calcOpticalFlowPyrLK(old_gray_frame, gray_frame,
+                                                            old_markers.astype(np.float32), None,
+                                                            **parameter_lucas_kanade)
+
+        new_markers = new_points.reshape(-1, 2)
+
+        return new_markers
+
+
     ##################
     # LOOP FUNCTION
     ##################
-
     def thread_loop(self):
         while not rospy.is_shutdown():
-            if (self.image is not None):                
+            if (self.old_image is not None):                
                 t_start = rospy.Time.now().to_nsec()*1e-6
-                # 1) read raw image
+                # 1) read raw images
                 raw_image = self.image.copy()
                 raw_image_stamp = self.image_stamp
-                self.image = None
+                old_raw_image = self.old_image.copy()
+                self.old_image = None
                 
-                # 2) Processing image (elap time ca 1 ms)
-                if (self.mask is None):
-                    processed_image = self.imageProcessing(raw_image,
+                # 2) Processing images (elap time ca 1 ms)
+                processed_image = self.imageProcessing(raw_image,
                                                         resize_shape=self.rshape,
                                                         gaussian_kernel_size = self.blur_kernel_size,
-                                                        mask=False)
-                else:
-                    processed_image = self.imageProcessing(raw_image,
+                                                        mask=self.mask)
+                old_processed_image = self.imageProcessing(old_raw_image,
                                                         resize_shape=self.rshape,
                                                         gaussian_kernel_size = self.blur_kernel_size,
-                                                        mask_radius=self.mask[2],mask_u_center=self.mask[0],mask_v_center=self.mask[1])
+                                                        mask=self.mask)
                     
                 # 3) Markers detection (elap time ca 20 ms)
-                self.markers = self.markerDetection(processed_image, self.markers_detection_params) 
+                if self.markers is None:
+                    self.markers = self.markerDetectionManual(processed_image, self.markers_detection_params) 
+                else:
+                    self.markers = self.markersTracking(old_processed_image,processed_image, self.markers)
+
                 M = self.markers.shape[0]
                 if (self.M is None):
                     self.M = M
@@ -225,7 +317,7 @@ class TacTipMarkersTracker:
                     marker.u = int(self.markers[i,0])
                     marker.v = int(self.markers[i,1])
                     markers.append(marker)
-                    processed_image = cv2.circle(processed_image, (marker.u, marker.v), 8, color=(0, 0, 255))
+                    processed_image = cv2.circle(processed_image, (marker.u, marker.v), 5, self.colors[i,:], -1)
                 markers_msg.markers = markers.copy()
 
                 self.data_publisher.publish(markers_msg)

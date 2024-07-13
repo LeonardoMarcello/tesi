@@ -1,0 +1,79 @@
+# Parameters for TacTip Contact detection
+# ##################
+# - DigiTac v1.5
+# ##################
+
+tactip:
+    camera:                             # TacTip camera intrinsic parameter
+        fx: 3.2337923992049144e+02      # - x focal lenght
+        fy: 3.4230028878526491e+02      # - y focal lenght
+        cx: 3.1042034270984652e+02      # - x camera center
+        cy: 2.4710324279132291e+02      # - y camera center
+        distortion_coeff: [             # - distortion
+            2.6255349323300113e-02, 
+            -5.2058533856701528e-03,
+            -2.5659488140401731e-03, 
+            -8.9320087280166040e-04,
+            -1.4789370573431722e-02]
+    markers: 87                         # Number of markes
+
+    mm2pxl: 15                          # conversion millimeters to pixel in a Frame
+
+image_processing:     
+    shape:                          # Reshaped image dimension
+        width: 640
+        height: 480
+
+    mask: polygon                   # Image mask  
+    
+    blur_kernel_size: 5             # Image noise filtering (Gaussian) kernel size  
+    
+    circle_recog:                   # Hough Gradient Circle recogition params
+        min_radius: 7               #   - min circle radius
+        max_radius: 12              #   - min circle radius
+        param1: 250                 #   - Upper threshold for the internal Canny edge detecto
+        param2: 8                   #   - Threshold for center detection
+        min_distance: 27            #   - min distance of adjacent circle
+
+markers_density:            # Params for Gaussian Kernel Algorithm
+    rate: 50                # rate [Hz]  
+
+    gaussian_kernel:        # Density Estimator Gaussian Kernel 
+        h: 30               #   - Density Estimator Gaussian Kernel std. dev, (TacTip: 15, DigiTac: 30)  
+                            #     (it should be close to mean distance in pixels between adjacent markers)                                    
+        verbose: False      #   - Print kernel estimation elapsed time 
+    
+    resolution: 1           # Resolution of pixels for Density estimation
+                            # i.e. d(u,v) = density[u//resolution,v//resolution]
+                            
+    threshold: 0.01          # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
+    
+    stiffness:              # Stiffness params for deformation estimate. def = a*vol+b*vol^2
+        #a: -0.2112          #   - linear parameter (norm to r)
+        #b: 4.1014           #   - quadratic parameter (norm to r)
+        #a: 0.00044         #   - linear parameter (no norm)
+        #b: -7.426e-9       #   - quadratic parameter (no norm)
+        a: 1.0725           #   - linear parameter (in mm)
+        b:  -0.0500         #   - quadratic parameter (in mm)
+
+markers_volume:         # Params for Voronoi Algorithm 
+    rate: 30                        # rate [Hz]  
+    voronoi:                        # Volume voronoi cell     
+        vertices: [[144, 456],      #   - List of points to delimit area with markers 
+                    [476, 456],     #    (they must be in clockwise or counterclockwise order) 
+                    [605, 365],
+                    [615,117],
+                    [495, 4],
+                    [161, 1],
+                    [44, 108],
+                    [34, 348]]                  
+        verbose: True               #   - Print area evaluation elapsed time 
+
+    resolution: 1                   # Resolution of pixels for Density estimation 
+                                    # i.e. d(u,v) = density[u//resolution,v//resolution]
+    
+    threshold: 50                   # Maximum volume variation allowed in a pixel before contact detection [1/mm^2]
+    
+    stiffness:                      # Stiffness params for deformation estimate. def = a*vol+b*vol^2
+        a: 1.179                    #   - linear parameter 
+        b: -0.09304                 #   - quadratic parameter

@@ -26,6 +26,7 @@ class TacTipGaussianKernel:
         # cy:                   intrinsic camera param y optical center
         # dist_coeff:           intrinsic camera param distortion parameter array
         # depth:                fingertip's plane distance from camera [mm]
+        # mm2pxl:               conversion millimeter to pixel in fingertip's plane
         #
         # h:                    Gaussian Kernel std. dev, (Ori: 15, Fingertip: 30)  
         #
@@ -46,6 +47,8 @@ class TacTipGaussianKernel:
         self.cy = rospy.get_param("tactip/camera/cy", 240)
         self.dist_coeff = rospy.get_param("tactip/camera/dist_coeff", [0,0,0,0,0])
         self.depth = rospy.get_param("tactip/camera/depth", 22)
+        self.mm2pxl = rospy.get_param("tactip/mm2pxl", 15)
+
 
         rate = rospy.get_param("markers_density/rate", 50)
         self.h = rospy.get_param("markers_density/gaussian_kernel/h", 30)
@@ -158,7 +161,7 @@ class TacTipGaussianKernel:
         # Normalize on a scale factor (M*mm2pixel)
         #scale_factor = shape[0]*shape[1]
         #scale_factor = markers.shape[0]*100    # TacTip
-        scale_factor = markers.shape[0]*15*15     # DigiTac
+        scale_factor = markers.shape[0]*self.mm2pxl*self.mm2pxl     # DigiTac
 
         density = scale_factor * np.array(density_img.T, dtype=float)
 

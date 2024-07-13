@@ -2,9 +2,12 @@
 <launch>
 	<arg name="namespace" default="sits_tactip"/>
 	<arg name="algorithm" default="gaussian"/>
+	<arg name="tactip" default="DigiTac"/>
 
 	<!--group ns="$(arg namespace)"-->
-		<rosparam file="$(find its)/config/tactip_params.yaml" command="load" />    
+
+		<rosparam file="$(find its)/config/DigiTac_params.yaml" command="load" if ="$(eval arg('tactip') == 'DigiTac')"/>    
+		<rosparam file="$(find its)/config/TacTip_params.yaml" command="load" if ="$(eval arg('tactip') == 'TacTip')"/>   
 		<!--<include file="$(find tactip_driver)/launch/tactip_camera.launch">
     		<arg name="video_device_param_name" value="usb_cam/video_device/"/>
 		    <arg name="video_device_param_value" value="/dev/video2"/>

@@ -51,8 +51,16 @@ rosrun its soft_its_viz				# Visualizzatore ITS
 ###	Launcher (Algoritmo, Visualizzatore e load parametri TacTip Density)
 ####	Versione con densita' gaussiana (*Default*)
 ##
-		roslaunch its tactip.launch algorithm:=gaussian
+		roslaunch its tactip.launch algorithm:=gaussian 
 
 ####	Versione superficie celle di voronoi
 ##
 		roslaunch its tactip.launch algorithm:=voronoi
+
+####	Versione parametri DigiTac (*Default*)
+##
+		roslaunch its tactip.launch tactip:=DigiTac
+
+####	Versione parametri TacTip
+##
+		roslaunch its tactip.launch tactip:=TacTip

@@ -164,6 +164,7 @@ include_directories(
    scripts/Sensor.py
    scripts/Classifier.py
    scripts/csv_publisher.py
+   scripts/csv2bag.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

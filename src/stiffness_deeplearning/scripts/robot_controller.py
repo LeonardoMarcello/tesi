@@ -33,7 +33,7 @@ from geometry_msgs.msg import Pose, PoseStamped, PointStamped, PoseArray
 import yaml
 from std_srvs.srv import Empty #service
 
-TABLE_HEIGHT = 0.131   # 0.016 -- Grasso sottile; 0.021 -- Arteria; 0.022 -- Grasso spesso; 0.017 -- Vena
+TABLE_HEIGHT = 0.0615   # 0.016 -- Grasso sottile; 0.021 -- Arteria; 0.022 -- Grasso spesso; 0.017 -- Vena
 
 try:
     from math import pi, tau, dist, fabs, cos
@@ -90,8 +90,8 @@ class RobotController(object):
         # Commentate
         self.save_data = rospy.ServiceProxy('save_data', Empty)                     # Measurement
         self.stop_save_data = rospy.ServiceProxy('stop_save_data', Empty)           
-        self.save_data_its = rospy.ServiceProxy('soft_csp/save_data', Empty)        # Soft Contact Sensing
-        self.stop_save_data_its = rospy.ServiceProxy('soft_csp/stop_data', Empty)   
+        #self.save_data_its = rospy.ServiceProxy('soft_csp/save_data', Empty)        # Soft Contact Sensing
+        #self.stop_save_data_its = rospy.ServiceProxy('soft_csp/stop_data', Empty)   
 
         #self.ft_client = rospy.ServiceProxy('/ft_sensor/bias_cmd', String_cmd)
         self.ft_client_franka = rospy.ServiceProxy('/ft_sensor_franka/bias_cmd', String_cmd)
@@ -107,7 +107,7 @@ class RobotController(object):
         self.error_recovery.wait_for_server()
         
         self.srv = Server(demo_tactip_cfgConfig, self.dyn_rec_callback)
-        self.table_height = TABLE_HEIGHT - 0.004   # --ori 0.010
+        self.table_height = TABLE_HEIGHT - 0.004   # <--- Indentation in m, (ori.  0.010)
 
         self.experiment = 0
         rospy.set_param('/num_exp', self.experiment) 
@@ -278,16 +278,16 @@ def main():
 
             ########################################
             # (LEO) funzione che esegue il log per l'ITS
-            input("Press `Enter` to start ITS solver log")
-            resp = robot_controller_node.save_data()                  # <----- Start log Measurement
-            resp = robot_controller_node.save_data_its()              # <----- Start log ITS solution
-            rospy.sleep(10)                                           #             | sleep in seconds
-            resp = robot_controller_node.stop_save_data_its()         # <----- End log ITS solution
-            resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
-
-            ################################
-            # IO (PAOLO) HO AGGIUNTO LA RIGA DI CODICE SOTTO
-            input("Press `Enter` to go back")
+            #input("Press `Enter` to start ITS solver log")
+            #resp = robot_controller_node.save_data()                  # <----- Start log Measurement
+            #resp = robot_controller_node.save_data_its()              # <----- Start log ITS solution
+            #rospy.sleep(10)                                           #             | sleep in seconds
+            #resp = robot_controller_node.stop_save_data_its()         # <----- End log ITS solution
+            #resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
+        #
+            #################################
+            ## IO (PAOLO) HO AGGIUNTO LA RIGA DI CODICE SOTTO
+            #input("Press `Enter` to go back")
             
             print("returning to pre-grasp")
             target = PoseStamped()

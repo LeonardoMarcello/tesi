@@ -66,7 +66,7 @@ class DataLogger:
 
         self.sequence = []
         self.experiment_prec = 0
-        self.savetiff = True
+        self.savetiff = False
 
         # Subscribe to F/T sensor data from ATI sensor publisher
         #self.sensor_subscriber = rospy.Subscriber('/ft_sensor/netft_data', WrenchStamped, self.sensor_callback) 
@@ -86,6 +86,7 @@ class DataLogger:
     
     def handle_stop_save_data(self, request):
         self.register = False
+        self.savetiff = True
         print('=====', self.register)
         return EmptyResponse()
 

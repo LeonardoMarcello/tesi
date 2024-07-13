@@ -12,6 +12,8 @@ rosrun its data_logger.py								# Log su csv indentazione, forza verticale, err
 
 
 rosrun stiffness_deeplearning csv_publisher.py			# Ri-pubblica dati salvati su csv
+
+rosrun stiffness_deeplearning csv2bag.py -o <bag_name>	# Costruzione bag a partire da misure su csv
 ```
 ## 1.a) Driver Sensori Force/Torque:
 ```

@@ -1,48 +1,52 @@
 # Parameters for Soft Intrinsic Tactile Sensing
 
-
+# ====================================================
+# - Fingertip description
+# ====================================================
 fingertip:
   # ############
   # - TacTip
   # ############
-  id: TacTip                # Fingertip name id
-  displacement:             # Displacement [mm] Fingertip Frame {B} w.r.t Sensor Frame {S}
-      x: .0                 
-      y: .0
-      z: 90
-  orientation:              # Orientation [rad] Fingertip Frame {B} w.r.t Sensor Frame {S} in Roll-Pitch-Yaw encoding
-      roll: .0
-      pitch: .0
-      yaw: .0
-  principalSemiAxis:        # Fingertip Surfaces principal Semi-Axis
-      a: 20                 # - Along x-axis of {B}, [mm]
-      b: 20                 # - Along y-axis of {B}, [mm]
-      c: 20                 # - Along z-axis of {B}, [mm]
-  stiffnessType:            # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2
-      a: 0.08384            # - linear coeff. [N/mm] 
-                            #   (0.08384/0.06999)
-      b: 0.0                # - quadratic coeff. [N/mm^2]
-                            #   (0.0/0.004296)
-  # #################
-  # - DigiTac v1.5
-  # #################
-  #id: DigiTac v1.5          # Fingertip name id
+  #id: TacTip                # Fingertip name id
   #displacement:             # Displacement [mm] Fingertip Frame {B} w.r.t Sensor Frame {S}
   #    x: .0                 
   #    y: .0
-  #    z: 20 # <-vedi meglio
+  #    z: 90
   #orientation:              # Orientation [rad] Fingertip Frame {B} w.r.t Sensor Frame {S} in Roll-Pitch-Yaw encoding
   #    roll: .0
   #    pitch: .0
   #    yaw: .0
-  #principalSemiAxis:                # Fingertip Surfaces principal Semi-Axis
-  #    a: 14.159785527280802         # - Along x-axis of {B}, [mm/10]
-  #    b: 16.353872888532234         # - Along y-axis of {B}, [mm/10]
-  #    c: 3.746242642709123          # - Along z-axis of {B}, [mm/10]
-  #stiffnessType:                    # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2   # <-vedi meglio
-  #    a: 4                          # - linear coeff. [N/mm]
-  #    b: .0                         # - quadratic coeff. [N/mm^2]
-  # ##################
+  #principalSemiAxis:        # Fingertip Surfaces principal Semi-Axis
+  #    a: 20                 # - Along x-axis of {B}, [mm]
+  #    b: 20                 # - Along y-axis of {B}, [mm]
+  #    c: 20                 # - Along z-axis of {B}, [mm]
+  #stiffnessType:            # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2
+  #    a: 0.08384            # - linear coeff. [N/mm] 
+  #                          #   (0.08384/0.06999)
+  #    b: 0.0                # - quadratic coeff. [N/mm^2]
+                            #   (0.0/0.004296)
+  # #################
+  # - DigiTac v1.5
+  # #################
+  id: DigiTac v1.5          # Fingertip name id
+  displacement:             # Displacement [mm] Fingertip Frame {B} w.r.t Sensor Frame {S}
+      x: .0                 
+      y: .0
+      z: 20 # <-vedi meglio
+  orientation:              # Orientation [rad] Fingertip Frame {B} w.r.t Sensor Frame {S} in Roll-Pitch-Yaw encoding
+      roll: .0
+      pitch: .0
+      yaw: .0
+  principalSemiAxis:                # Fingertip Surfaces principal Semi-Axis
+      a: 14.159785527280802         # - Along x-axis of {B}, [mm]
+      b: 16.353872888532234         # - Along y-axis of {B}, [mm]
+      c: 3.746242642709123          # - Along z-axis of {B}, [mm]
+  stiffnessType:                    # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2   # <-vedi meglio
+      a: 0.2275                     # - linear coeff. [N/mm]
+                                    #   (0.3143/0.2275)
+      b: 0.0349                     # - quadratic coeff. [N/mm^2]
+                                    #   (0.0/0.0349)
+   ##################
   # - Versione prova
   # ##################
   #id: myFingerFromParams    # Fingertip name id
@@ -81,11 +85,17 @@ fingertip:
   #    a: 0.84460777         # - linear coeff.  [N/mm]
   #    b: .0                 # - quadratic coeff. [N/mm^2]
 
+# ====================================================
+# - Force/Torque Sensor
+# ====================================================
 sensor:
   #id: ft_sensor             # F/T Sensor name id
   id: ft_sensor_tactip     # F/T Sensor name id with 2 sensor config
 
 
+# ====================================================
+# - Solver parameters
+# ====================================================
 soft_its:
   rate: 100                                  # Rate of node in [Hz]
   algorithm:                                # Soft Intrinsic Tactile Sensing solver

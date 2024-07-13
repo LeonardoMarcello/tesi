@@ -1,8 +1,7 @@
-# Parameters for TacTip Contact detection
-# ##################
-# - DigiTac v1.5
-# ##################
-
+# Parameters for TacTip Contact detection on the DigiTac
+# ========================================================
+# - Tactip camera description
+# ========================================================
 tactip:
     camera:                             # TacTip camera intrinsic parameter
         fx: 3.2337923992049144e+02      # - x focal lenght
@@ -17,8 +16,13 @@ tactip:
             -1.4789370573431722e-02]
     markers: 87                         # Number of markes
 
-    mm2pxl: 15                          # conversion millimeters to pixel in a Frame
+    mm2pxl: 15                          # conversion millimeters to pixel in a frame
 
+
+
+# ========================================================
+# - Image processing parameters
+# ========================================================
 image_processing:     
     shape:                          # Reshaped image dimension
         width: 640
@@ -35,6 +39,12 @@ image_processing:
         param2: 8                   #   - Threshold for center detection
         min_distance: 27            #   - min distance of adjacent circle
 
+
+
+
+# ========================================================
+# - Gaussian Kernel Density Estimation algorithm parameters
+# ========================================================
 markers_density:            # Params for Gaussian Kernel Algorithm
     rate: 50                # rate [Hz]  
 
@@ -46,18 +56,22 @@ markers_density:            # Params for Gaussian Kernel Algorithm
     resolution: 1           # Resolution of pixels for Density estimation
                             # i.e. d(u,v) = density[u//resolution,v//resolution]
                             
-    threshold: 0.01          # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
+    threshold: 0.01         # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
     
-    stiffness:              # Stiffness params for deformation estimate. def = a*vol+b*vol^2
-        #a: -0.2112          #   - linear parameter (norm to r)
-        #b: 4.1014           #   - quadratic parameter (norm to r)
-        #a: 0.00044         #   - linear parameter (no norm)
-        #b: -7.426e-9       #   - quadratic parameter (no norm)
-        a: 1.0725           #   - linear parameter (in mm)
-        b:  -0.0500         #   - quadratic parameter (in mm)
+    fit:                    # Fit parameters for deformation estimate
+        type: "power"   
+        a: 0.8776 
+        b: 0.6165 
 
+
+
+
+# ========================================================
+# - Voronoi cell algorithm parameters
+# ========================================================
 markers_volume:         # Params for Voronoi Algorithm 
     rate: 30                        # rate [Hz]  
+    
     voronoi:                        # Volume voronoi cell     
         vertices: [[144, 456],      #   - List of points to delimit area with markers 
                     [476, 456],     #    (they must be in clockwise or counterclockwise order) 
@@ -74,6 +88,7 @@ markers_volume:         # Params for Voronoi Algorithm
     
     threshold: 50                   # Maximum volume variation allowed in a pixel before contact detection [1/mm^2]
     
-    stiffness:                      # Stiffness params for deformation estimate. def = a*vol+b*vol^2
-        a: 1.179                    #   - linear parameter 
-        b: -0.09304                 #   - quadratic parameter
+    fit:                            # Fit parameters for deformation estimate
+        type: "logarithmic"
+        a: 0.5241 
+        b: 22.6688

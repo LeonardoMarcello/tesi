@@ -37,8 +37,9 @@ class TacTipVoronoi:
         #
         # threshold:            Marker Density threshold for contact detection
         #
-        # stiff_params:         Stiffness fitted parameters (a = stiff_params[0], b = stiff_params[1])
-        #                       i.e. deformation = a*volume_integral + b*volume_integral^2
+        # fit_type:             Type of curve used in deformation estimation
+        # fit_params:           Fitting curve parameters (a = stiff_params[0], b = stiff_params[1], ...)
+        #
         #
         # verbose:              Print routine elapsed time
         
@@ -62,10 +63,11 @@ class TacTipVoronoi:
         self.vertices = np.array(ver)   
         self.resolution = rospy.get_param("markers_volume/resolution", 1)
         self.threshold = rospy.get_param("markers_volume/threshold", 500)
-        a = rospy.get_param("markers_volume/stiffness/a", 1.179)
-        b = rospy.get_param("markers_volume/stiffness/b", -0.09304)
+        self.fit_type = rospy.get_param("markers_volume/fit/type", "quadratic")
+        a = rospy.get_param("markers_volume/fit/a", -0.2112)
+        b = rospy.get_param("markers_volume/fit/b", 4.1014)
         self.rshape = (w,h)
-        self.stiff_params = [a,b]
+        self.fit_params = [a,b]
 
         # Variables
         self.markers = None             # Markers Positions numpy Array
@@ -260,12 +262,26 @@ class TacTipVoronoi:
     def volume2deformation(self, integral, params):
         """
         volume2deformation: 
-            Estimate tip deformation by volume integral value.
-            It uses a polynomial fit. y = a*x + b*x^2) 
+            Estimate tip deformation by volume integral value.. The desired fit type can be parsed 
+            as parameter type.
+                linear:         y = a + b*x
+                quadratic:      y = a*x + b*x^2 (Default)
+                power:          y = a*x^b
+                logarithmic:    y = a*ln(b*x)
             return deformation as float
-        """
+        """        
         # Volume variation
-        deformation = params[0]*integral + params[1]*integral*integral
+        if type=="linear":             
+            deformation = params[0]*integral + params[1]*integral*integral
+        elif type=="quadratic":             
+            deformation = params[0]*integral + params[1]*integral*integral
+        elif type=="power":             
+            deformation = params[0]*np.power(integral,params[1])
+        elif type=="logarithmic":             
+            deformation = params[0]*np.log(integral*params[1])
+        else:
+            deformation = params[0]*integral + params[1]*integral*integral   
+
         return deformation
     
     def camera2body(self,PoC_C):
@@ -321,7 +337,7 @@ class TacTipVoronoi:
                     PoC_B = self.camera2body(self.PoC)
                     # estimate deformation
                     integral = self.volume_integration(self.volume_fit, self.volume_fit_at_rest, self.rshape)
-                    self.deformation = self.volume2deformation(integral, self.stiff_params)
+                    self.deformation = self.volume2deformation(integral, self.fit_params,self.fit_type)
                     # broadcast initial guess
                     rospy.loginfo("Contact detected at Pixels (u, v, def) = (%i, %i, %.2f) -> (x, y, z) = (%.2f, %.2f, %.2f)",
                                   self.PoC[0],self.PoC[1], self.deformation,

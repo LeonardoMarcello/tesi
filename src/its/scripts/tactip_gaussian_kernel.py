@@ -70,6 +70,7 @@ class TacTipGaussianKernel:
         self.density_at_rest = None   # Estimated Marker Density with no contact, i.e. d0(u,v)
         self.PoC = None               # Estimated Point of Contact in camera frame, i.e. PoC = (u,v)
         self.deformation = None       # Estimated tip deformation [mm]
+        self.times = []               # Elapsed time array (None to avoid log)
 
 
 
@@ -83,13 +84,17 @@ class TacTipGaussianKernel:
         self.initial_guess_publisher = rospy.Publisher("soft_csp/initial_guess", SoftContactSensingProblemSolution, queue_size=10) 
 
         # Initialize Thread
-        print(rate)
         self.rate = rospy.Rate(rate)  # Loop rate [Hz]
         self.thread = threading.Thread(target=self.thread_loop)
         self.thread.daemon = True
         print("Hi from TacTip Gaussian Density Estimator")  
         self.thread.start()
 
+
+    def __del__(self):
+        # Close CSV file when the node is shutting down
+        if self.times is not None:
+            print(f"Gaussian Elapsed time: {np.mean(self.times)} (± {np.std(self.times)}) ms")
         
     ##################
     # CALLBACKs
@@ -218,7 +223,7 @@ class TacTipGaussianKernel:
         # Density variation
         DeltaZm = density_at_rest - density
         # integrate
-        integral = np.nansum(DeltaZm[R].flatten())/100*resolution # mm2pxl = 10
+        integral = np.nansum(DeltaZm[R].flatten())/(self.mm2pxl*self.mm2pxl)*resolution # mm2pxl = 10
         #area = np.sum(np.array(R,dtype = int))*resolution
 
         return integral#/area
@@ -265,7 +270,8 @@ class TacTipGaussianKernel:
         x = (u-u0)/fx*z
         y = (v-v0)/fy*z
 
-        PoC_B = (x,y,z)
+        PoC_B = (y,-x,z-18)              # <----- per z differenza piani -18 circa
+                                        #        x,z invertiti perche immagine specchiata?
 
         return PoC_B
 
@@ -276,6 +282,7 @@ class TacTipGaussianKernel:
     def thread_loop(self):
         while not rospy.is_shutdown():
             if (self.markers is not None):
+                t_start = rospy.Time.now().to_nsec()*1e-6
                 # 1) Markers detection
                 markers = self.markers.copy()
                 stamp = self.markers_stamp
@@ -338,6 +345,8 @@ class TacTipGaussianKernel:
                 tactip_msg.delta_density = (self.density_at_rest-self.density).flatten()  
                 self.data_publisher.publish(tactip_msg)
                 
+                t_end = rospy.Time.now().to_nsec()*1e-6
+                if self.times is not None: self.times.append(t_end-t_start) 
 
             #else:
             #   rospy.loginfo("No Markers tracked")

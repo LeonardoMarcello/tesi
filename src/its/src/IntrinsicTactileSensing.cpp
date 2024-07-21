@@ -81,7 +81,7 @@ int IntrinsicTactileSensing::solveContactSensingProblemLM(ContactSensingProblemS
     double x, y, z, k;            // Store solution into more readable variables
     x = this->X.c(0);                // PoC x [mm]
     y = this->X.c(1);                // PoC y [mm]
-    z = this->X.c(2);                // PoC z[mm]
+    z = this->X.c(2);                // PoC z [mm]
     k = this->X.K;                   // Scale Factor
     
 

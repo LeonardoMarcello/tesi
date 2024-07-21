@@ -33,7 +33,9 @@ from geometry_msgs.msg import Pose, PoseStamped, PointStamped, PoseArray
 import yaml
 from std_srvs.srv import Empty #service
 
-TABLE_HEIGHT = 0.0615   # 0.016 -- Grasso sottile; 0.021 -- Arteria; 0.022 -- Grasso spesso; 0.017 -- Vena
+TABLE_HEIGHT = 0.0775   
+# 0.0775 -- 0 deg su livella; 0.0875 -- 15 deg su livella; 0.077 -- 30 deg
+# 0.016 -- Grasso sottile; 0.021 -- Arteria; 0.022 -- Grasso spesso; 0.017 -- Vena
 
 try:
     from math import pi, tau, dist, fabs, cos
@@ -88,10 +90,11 @@ class RobotController(object):
         self.ee_link = ee_link
 
         # Commentate
-        self.save_data = rospy.ServiceProxy('save_data', Empty)                     # Measurement
-        self.stop_save_data = rospy.ServiceProxy('stop_save_data', Empty)           
-        #self.save_data_its = rospy.ServiceProxy('soft_csp/save_data', Empty)        # Soft Contact Sensing
-        #self.stop_save_data_its = rospy.ServiceProxy('soft_csp/stop_data', Empty)   
+        self.save_data = rospy.ServiceProxy('save_data', Empty)                              # Measurement
+        self.stop_save_data = rospy.ServiceProxy('stop_save_data', Empty)  
+        self.start_indent = rospy.ServiceProxy('start_indent', Empty)                       # Soft Contact Sensing        
+        self.save_data_its = rospy.ServiceProxy('soft_csp/save_data', Empty)
+        self.stop_save_data_its = rospy.ServiceProxy('soft_csp/stop_save_data', Empty)   
 
         #self.ft_client = rospy.ServiceProxy('/ft_sensor/bias_cmd', String_cmd)
         self.ft_client_franka = rospy.ServiceProxy('/ft_sensor_franka/bias_cmd', String_cmd)
@@ -107,7 +110,9 @@ class RobotController(object):
         self.error_recovery.wait_for_server()
         
         self.srv = Server(demo_tactip_cfgConfig, self.dyn_rec_callback)
-        self.table_height = TABLE_HEIGHT - 0.004   # <--- Indentation in m, (ori.  0.010)
+        INDENTATION = 0.002
+        self.table_height = TABLE_HEIGHT - INDENTATION                                  # <--- Indentation in m, (ori.  0.010)
+        rospy.set_param('/indentation', INDENTATION*1000.0) 
 
         self.experiment = 0
         rospy.set_param('/num_exp', self.experiment) 
@@ -248,15 +253,18 @@ def main():
             robot_controller_node.go_to_pose(target)[0:1]
             rospy.sleep(1) 
 
+            ########################################
+            # (LEO) funzione che esegue il log della posizione pre grasp
+            resp = robot_controller_node.start_indent()             # <----- Set pre-grasp indentation pose in logger node
+            rospy.sleep(3) 
+
             # Commentate <----
             #robot_controller_node.set_bias()
             #resp_ft = robot_controller_node.ft_client(robot_controller_node.srv_ft)
-            resp = robot_controller_node.save_data()             # <----- Start log Measurement
-            # ##
-
-            ########################################
-            #funzione che esegue il task princiaple
-            print("going to grasp with heigh ", robot_controller_node.table_height)
+            #resp = robot_controller_node.save_data()             # <----- Start log Measurement
+            # ##roslaunch its tactip.launch#########################
+            #funzione che esegue il task princiaple            
+            print("going to grasp with height ", robot_controller_node.table_height)
             table = PoseStamped()
             table.pose.position.x = 0
             table.pose.position.y = 0
@@ -273,18 +281,20 @@ def main():
             table.header = header
             robot_controller_node.move_group_robot.set_max_velocity_scaling_factor(0.01)
             robot_controller_node.go_to_pose(table)[0:1]
-            resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
+            #resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
             robot_controller_node.move_group_robot.set_max_velocity_scaling_factor(1)
 
             ########################################
             # (LEO) funzione che esegue il log per l'ITS
-            #input("Press `Enter` to start ITS solver log")
-            #resp = robot_controller_node.save_data()                  # <----- Start log Measurement
-            #resp = robot_controller_node.save_data_its()              # <----- Start log ITS solution
-            #rospy.sleep(10)                                           #             | sleep in seconds
-            #resp = robot_controller_node.stop_save_data_its()         # <----- End log ITS solution
-            #resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
-        #
+            choice = input("============ Press `Enter` to start ITS solver log or q to return to pre-grasp ...")
+            if choice == "":
+                resp = robot_controller_node.save_data()                  # <----- Start log Measurement
+                resp = robot_controller_node.save_data_its()              # <----- Start log ITS solution
+                rospy.sleep(10)                                           #             | sleep in seconds
+                resp = robot_controller_node.stop_save_data_its()         # <----- End log ITS solution
+                resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
+                rospy.sleep(3)                                            #             | sleep in seconds
+                
             #################################
             ## IO (PAOLO) HO AGGIUNTO LA RIGA DI CODICE SOTTO
             #input("Press `Enter` to go back")
@@ -315,7 +325,7 @@ def main():
             #robot_controller_node.move_group_robot.stop()
             #robot_controller_node.move_group_robot.clear_pose_targets()
         elif choice == "q":
-            print("returing to ready")
+            print("returning to ready")
             robot_controller_node.move_group_robot.set_named_target('ready')
             executed = robot_controller_node.move_group_robot.go(wait=True)
             robot_controller_node.move_group_robot.stop()

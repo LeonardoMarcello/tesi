@@ -8,9 +8,11 @@ import cv2
 import numpy as np
 import tifffile
 
+
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
+
 matplotlib.use("Qt5agg")
 matplotlib.interactive(True)
 
@@ -186,8 +188,11 @@ class ITSTacTipViz:
         #plt.clim(0, 4)
         #plt.clim(0, 550)
 
-        plt.draw()
-        plt.pause(0.02)
+        #plt.draw()
+        plt.gcf().canvas.draw_idle()
+        plt.gcf().canvas.start_event_loop(0.3)
+        plt.ion()
+        #plt.pause(0.02)
 
 
     def run(self):

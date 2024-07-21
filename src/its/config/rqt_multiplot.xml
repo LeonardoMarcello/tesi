@@ -192,7 +192,7 @@
                                 <title_visible>true</title_visible>
                             </x_axis>
                             <y_axis>
-                                <custom_title>Torque [Nm]</custom_title>
+                                <custom_title>Torque [Nmm]</custom_title>
                                 <title_type>1</title_type>
                                 <title_visible>true</title_visible>
                             </y_axis>
@@ -248,7 +248,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>Torque x [Nm]</title>
+                            <title>Torque x [Nmm]</title>
                         </curve_0>
                         <curve_1>
                             <axes>
@@ -299,7 +299,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>Torque y [Nm]</title>
+                            <title>Torque y [Nmm]</title>
                         </curve_1>
                         <curve_2>
                             <axes>
@@ -350,7 +350,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>Torque z [Nm]</title>
+                            <title>Torque z [Nmm]</title>
                         </curve_2>
                     </curves>
                     <legend>

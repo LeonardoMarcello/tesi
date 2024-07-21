@@ -15,18 +15,18 @@ ExtendedContactSensingProblemSolution solution;     // Extended CSP Solution
 std::vector<double> psa_at_rest(3);                 // principal axis with no contact
 
 // Measures variables
-bool new_measure = false;               // Force measured from ATI sensor [N]
+bool new_measure = false;               // New measure available
 Eigen::Vector3d f;                      // Force measured from ATI sensor [N]
-Eigen::Vector3d m;                      // Torque measured from ATI sensor [N]
+Eigen::Vector3d m;                      // Torque measured from ATI sensor [Nm]
 
 // Force/Torque Sensor callback
 void ftCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg){
   f(0) = msg->wrench.force.x;
   f(1) = msg->wrench.force.y;
   f(2) = msg->wrench.force.z;
-  m(0) = msg->wrench.torque.x;
-  m(1) = msg->wrench.torque.y;
-  m(2) = msg->wrench.torque.z;
+  m(0) = msg->wrench.torque.x/1000.0;
+  m(1) = msg->wrench.torque.y/1000.0;
+  m(2) = msg->wrench.torque.z/1000.0;
   new_measure = true;
 }
 

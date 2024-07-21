@@ -43,11 +43,12 @@ class TacTipMarkersTracker:
         
         # Variables
         self.markers  = None                        # Markers Positions as numpy array
-        self.colors = 255*np.random.rand(127,3)     # Markers centroid visualise color
+        self.colors = 255*np.random.rand(127,3)     # Markers centroid visualize color
         self.bridge = CvBridge()                    # Ros to OpenCV Image Converter
         self.image = None                           # Current Raw TacTip Image
         self.old_image = None                       # Last Raw TacTip Image (used in Optic Flow evale)
         self.image_stamp = None                     # Current Raw TacTip Image timestamp
+        self.times = []                             # Elapsed time array (None to avoid log)
 
 
         # Subscriber to TacTip image data
@@ -64,6 +65,10 @@ class TacTipMarkersTracker:
         print("Hi from TacTip markers tracker")  
         self.thread.start()
 
+    def __del__(self):
+        # Close CSV file when the node is shutting down
+        if self.times is not None:
+            print(f"Tracking Elapsed time: {np.mean(self.times)} (± {np.std(self.times)}) ms")
         
     ##################
     # CALLBACKs
@@ -74,14 +79,12 @@ class TacTipMarkersTracker:
         tactip_callback: 
             Store raw TacTip image.
         """            
-        # 1) store old raw frame
-        if self.image is not None:
-            self.old_image = self.image.copy()
-        else:
-            self.old_image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='rgb8')
-        # 2) Store new raw frame
+        # 1) Store new raw frame
         self.image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='rgb8')
         self.image_stamp = image_msg.header.stamp
+        # 2) store old raw frame if needed
+        if self.old_image is  None:
+            self.old_image = self.image.copy()
 
         return   
         
@@ -269,20 +272,15 @@ class TacTipMarkersTracker:
     ##################
     def thread_loop(self):
         while not rospy.is_shutdown():
-            if (self.old_image is not None):                
+            if (self.image is not None):                
                 t_start = rospy.Time.now().to_nsec()*1e-6
                 # 1) read raw images
                 raw_image = self.image.copy()
                 raw_image_stamp = self.image_stamp
-                old_raw_image = self.old_image.copy()
-                self.old_image = None
+                self.image = None
                 
                 # 2) Processing images (elap time ca 1 ms)
                 processed_image = self.imageProcessing(raw_image,
-                                                        resize_shape=self.rshape,
-                                                        gaussian_kernel_size = self.blur_kernel_size,
-                                                        mask=self.mask)
-                old_processed_image = self.imageProcessing(old_raw_image,
                                                         resize_shape=self.rshape,
                                                         gaussian_kernel_size = self.blur_kernel_size,
                                                         mask=self.mask)
@@ -290,8 +288,11 @@ class TacTipMarkersTracker:
                 # 3) Markers detection (elap time ca 20 ms)
                 if self.markers is None:
                     self.markers = self.markerDetectionManual(processed_image, self.markers_detection_params) 
+                    self.old_image = processed_image.copy()
+                    continue
                 else:
-                    self.markers = self.markersTracking(old_processed_image,processed_image, self.markers)
+                    self.markers = self.markersTracking(self.old_image, processed_image, self.markers)
+                    #self.markers = self.markerDetection(processed_image, self.markers_detection_params) 
 
                 M = self.markers.shape[0]
                 if (self.M is None):
@@ -307,6 +308,7 @@ class TacTipMarkersTracker:
                 if (M!=self.M):
                     rospy.logwarn("Detected %i/%i markers", M, self.M)
 
+                self.old_image = processed_image.copy()
                 # 4) Broadcast detected markers centroid and processed image (elap time ca 1 ms)
                 markers = []
                 markers_msg = TacTipMarkers()
@@ -328,6 +330,7 @@ class TacTipMarkersTracker:
                 t_end = rospy.Time.now().to_nsec()*1e-6
                 if (t_end-t_start > self.rate.sleep_dur.to_nsec()*1e-6):
                     rospy.logwarn("Image processing is slower than node rate, elapsed time: %.2f ms",(t_end-t_start))
+                if self.times is not None: self.times.append(t_end-t_start) 
 
             # sleep at specified rate
             self.rate.sleep()

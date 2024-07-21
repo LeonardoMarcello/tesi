@@ -1,7 +1,7 @@
 # Parameters for TacTip Contact detection on the DigiTac
-# ========================================================
+# ===========================================================
 # - Tactip camera description
-# ========================================================
+# ===========================================================
 tactip:
     camera:                             # TacTip camera intrinsic parameter
         fx: 3.2337923992049144e+02      # - x focal lenght
@@ -14,15 +14,16 @@ tactip:
             -2.5659488140401731e-03, 
             -8.9320087280166040e-04,
             -1.4789370573431722e-02]
+            
     markers: 87                         # Number of markes
 
     mm2pxl: 15                          # conversion millimeters to pixel in a frame
 
 
 
-# ========================================================
+# ===========================================================
 # - Image processing parameters
-# ========================================================
+# ===========================================================
 image_processing:     
     shape:                          # Reshaped image dimension
         width: 640
@@ -42,9 +43,9 @@ image_processing:
 
 
 
-# ========================================================
+# ===========================================================
 # - Gaussian Kernel Density Estimation algorithm parameters
-# ========================================================
+# ===========================================================
 markers_density:            # Params for Gaussian Kernel Algorithm
     rate: 50                # rate [Hz]  
 
@@ -59,7 +60,7 @@ markers_density:            # Params for Gaussian Kernel Algorithm
     threshold: 0.01         # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
     
     fit:                    # Fit parameters for deformation estimate
-        type: "power"   
+        type: "power"       # type of curve (i.e linear, quadratic, power, logarithmic)   
         a: 0.8776 
         b: 0.6165 
 
@@ -89,6 +90,6 @@ markers_volume:         # Params for Voronoi Algorithm
     threshold: 50                   # Maximum volume variation allowed in a pixel before contact detection [1/mm^2]
     
     fit:                            # Fit parameters for deformation estimate
-        type: "logarithmic"
+        type: "logarithmic"         # type of curve (i.e linear, quadratic, power, logarithmic)
         a: 0.5241 
         b: 22.6688

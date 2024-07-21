@@ -82,6 +82,7 @@ class TacTipVoronoi:
         self.volume_fit_at_rest = None  # Voronoi volume fitted with no contact, i.e. Vol0(u,v)
         self.PoC = None                 # Estimated Point of Contact in camera frame, i.e. PoC = (u,v)
         self.deformation = None         # Estimated tip deformation [mm]
+        self.times = []                 # Elapsed time array (None to avoid log)
 
         # Services
         self.calibrate = rospy.Service("calibrate_at_rest", Empty, self.handle_calibrate)
@@ -98,6 +99,12 @@ class TacTipVoronoi:
         self.thread.daemon = True
         print("Hi from TacTip Voronoi")  
         self.thread.start()
+
+
+    def __del__(self):
+        # Close CSV file when the node is shutting down
+        if self.times is not None:
+            print(f"Voronoi Elapsed time: {np.mean(self.times)} (± {np.std(self.times)}) ms")
         
     ##################
     # CALLBACKs
@@ -172,7 +179,7 @@ class TacTipVoronoi:
         for i in range(vertices.shape[0]):
             vi = vertices[i, :]
             v_next = vertices[np.mod(i+1, vertices.shape[0]), :]
-            alpha = np.arange(0, 1, 1/6)
+            alpha = np.arange(0, 1, 1/3) #1/6
             points = np.array([alpha*vi[0]+(1-alpha)*v_next[0], alpha*vi[1]+(1-alpha)*v_next[1]]).T
             border = np.vstack((border, points))
 
@@ -259,7 +266,7 @@ class TacTipVoronoi:
         integral = np.nansum(DeltaZm.flatten())/(shape[0]*shape[1])
         return integral
         
-    def volume2deformation(self, integral, params):
+    def volume2deformation(self, integral, params, type="quadratic"):
         """
         volume2deformation: 
             Estimate tip deformation by volume integral value.. The desired fit type can be parsed 
@@ -313,6 +320,7 @@ class TacTipVoronoi:
     def thread_loop(self):
         while not rospy.is_shutdown():
             if self.markers is not None:
+                t_start = rospy.Time.now().to_nsec()*1e-6
                 # 1) Markers detection
                 markers = self.markers.copy()
                 markers_stamp = self.markers_stamp
@@ -377,6 +385,10 @@ class TacTipVoronoi:
                 tactip_msg.density = self.volume_fit.flatten()  
                 tactip_msg.delta_density = (self.volume_fit-self.volume_fit_at_rest).flatten()  
                 self.data_publisher.publish(tactip_msg)
+
+                
+                t_end = rospy.Time.now().to_nsec()*1e-6
+                if self.times is not None: self.times.append(t_end-t_start) 
             #else:
             #    rospy.loginfo("No Markers tracked")
             

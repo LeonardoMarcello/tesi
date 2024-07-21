@@ -30,18 +30,22 @@ fingertip:
   # #################
   id: DigiTac v1.5          # Fingertip name id
   displacement:             # Displacement [mm] Fingertip Frame {B} w.r.t Sensor Frame {S}
-      x: .0                 
-      y: .0
-      z: 20 # <-vedi meglio
+      x: .0                 #   .0   |  .0    | .0
+      y: .0                 #   .0   |  .0    | .0
+      z: 40                 #   40   |  50    | 60
   orientation:              # Orientation [rad] Fingertip Frame {B} w.r.t Sensor Frame {S} in Roll-Pitch-Yaw encoding
-      roll: .0
-      pitch: .0
-      yaw: .0
+      roll: .0 #-0.523599              #   .0   |  -0.261799 (15deg)  | -0.523599 (30deg)
+      pitch: .0             #   .0   |  .0                 | .0
+      yaw: .0               #   .0   |  .0                 | .0
   principalSemiAxis:                # Fingertip Surfaces principal Semi-Axis
-      a: 14.159785527280802         # - Along x-axis of {B}, [mm]
-      b: 16.353872888532234         # - Along y-axis of {B}, [mm]
-      c: 3.746242642709123          # - Along z-axis of {B}, [mm]
-  stiffnessType:                    # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2   # <-vedi meglio
+      a: 15.110254096105802         
+      b: 18.489684621717174         
+      c: 4.737196072702191   
+
+      #a: 14.159785527280802         # - Along x-axis of {B}, [mm]
+      #b: 16.353872888532234         # - Along y-axis of {B}, [mm]
+      #c: 3.746242642709123          # - Along z-axis of {B}, [mm]       
+  stiffnessType:                    # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2
       a: 0.2275                     # - linear coeff. [N/mm]
                                     #   (0.3143/0.2275)
       b: 0.0349                     # - quadratic coeff. [N/mm^2]
@@ -101,12 +105,12 @@ soft_its:
   algorithm:                                # Soft Intrinsic Tactile Sensing solver
     verbose: false                          # print output on each step
     #force_threshold: 0.5                    # Force threshold to enable solver [N]
-    force_threshold: 0.01                    # Force threshold to enable solver [N]
+    force_threshold: 0.1                    # Force threshold to enable solver [N]
     method: 
-        name: Levenberg-Marquardt           # solver method
+        #name: Levenberg-Marquardt           # solver method (Default Levenberg-Marquardt)
         #name: Gauss-Newton           
-        #name: Closed-Form           
+        name: Closed-Form           
         params:
             count_max: 500                  # num of max iteration until forced stop
-            stop_threshold: 0.001            # Xi_square threshold for convergence condition 
+            stop_threshold: 0.001           # Xi_square threshold for convergence condition 
             epsilon: 0.001                  # Lavenberg-Marquantd updating param

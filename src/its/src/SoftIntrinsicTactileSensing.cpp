@@ -43,6 +43,7 @@ bool SoftIntrinsicTactileSensing::setFingertipOrientation(double roll, double pi
                 0,              0,      1;
 
     this->fingertip.orientation = Yaw*Pitch*Roll;
+
     return true;
 }
 
@@ -477,9 +478,12 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblemCF(Eigen::Vector3d f,
 			psa(2) = c - (fabs(pz)/E[0]);
 			break;
 		case StiffnessType::Quadratic:
-            psa(0) = a - (-E[0] - sqrt(pow(E[0],2) + 4*E[1]*fabs(px))/(2*E[1]));
-            psa(1) = b - (-E[0] - sqrt(pow(E[0],2) + 4*E[1]*fabs(py))/(2*E[1]));
-            psa(2) = c - (-E[0] - sqrt(pow(E[0],2) + 4*E[1]*fabs(pz))/(2*E[1]));
+            psa(0) = a - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(px)))/(2*E[1]);
+            psa(1) = b - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(py)))/(2*E[1]);
+            psa(2) = c - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(pz)))/(2*E[1]);
+			break;
+		case StiffnessType::Rigid:
+            psa(0) = a; psa(1) = b; psa(2) = c;
 			break;
 		default:
 			psa(0) = a; psa(1) = b; psa(2) = c;

@@ -82,7 +82,7 @@ class TacTipVoronoi:
         self.volume_fit_at_rest = None  # Voronoi volume fitted with no contact, i.e. Vol0(u,v)
         self.PoC = None                 # Estimated Point of Contact in camera frame, i.e. PoC = (u,v)
         self.deformation = None         # Estimated tip deformation [mm]
-        self.times = []                 # Elapsed time array (None to avoid log)
+        self.times = None                 # Elapsed time array (None to avoid log)
 
         # Services
         self.calibrate = rospy.Service("calibrate_at_rest", Empty, self.handle_calibrate)

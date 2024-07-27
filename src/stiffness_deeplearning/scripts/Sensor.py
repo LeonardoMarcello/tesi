@@ -150,6 +150,7 @@ class DataLogger:
     def handle_stop_save_data(self, request):
         self.register = False
         self.savetiff = True
+        rospy.sleep(1) 
         self.h0 = 0
         print('=====', self.register)
         return EmptyResponse()
@@ -178,7 +179,7 @@ class DataLogger:
             # Broadcast measured indentation
             indent = PoseStamped()
             indent.header.stamp = timestamp_pose
-            indent.pose.position.z = self.h0-z_position*1000.0
+            indent.pose.position.z = (self.h0-z_position)*1000.0
             self.indentation_publisher.publish(indent)
     
     

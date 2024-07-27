@@ -153,6 +153,7 @@ add_dependencies(soft_its_viz ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPOR
 target_link_libraries(soft_its_node
    ${catkin_LIBRARIES}
    SoftIntrinsicTactileSensing
+   IntrinsicTactileSensing
 )
 
 target_link_libraries(its_node

@@ -226,10 +226,7 @@ int IntrinsicTactileSensing::solveContactSensingProblemGN(ContactSensingProblemS
     const double c = this->fingertip.model.principalAxisCoeff[2];
 
     const Eigen::Vector3d d_sb =  this->fingertip.displacement;
-    const Eigen::Matrix3d R_sb =  this->fingertip.orientation;
-
-    const std::vector<double> E = this->fingertip.model.stiffnessCoefficients;   // Surface Stiffness Coefficients [N/mm]
-    
+    const Eigen::Matrix3d R_sb =  this->fingertip.orientation;    
     
     // F/T Sensor measures
     Eigen::Vector3d tmp = R_sb*f;       // Force Measure [N] w.r.t Fingertip Frame, {B}
@@ -350,8 +347,6 @@ int IntrinsicTactileSensing::solveContactSensingProblemCF(Eigen::Vector3d f, Eig
 
     const Eigen::Vector3d d_sb =  this->fingertip.displacement;
     const Eigen::Matrix3d R_sb =  this->fingertip.orientation;
-
-    const std::vector<double> E = this->fingertip.model.stiffnessCoefficients;   // Surface Stiffness Coefficients [N/mm]
 
     // F/T Sensor measures
     Eigen::Vector3d tmp = R_sb*f;       // Force Measure [N] w.r.t Fingertip Frame, {B}

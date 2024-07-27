@@ -128,7 +128,6 @@ int main(int argc, char **argv){
 
 
   // Set initial guess
-  //X0.c = {0,0,psa[2]};
   X0.c = {0,0,psa[2]/2};
   X0.K = 0;
   

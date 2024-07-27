@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/WrenchStamped.h"
 #include "its_msgs/SoftContactSensingProblemSolution.h"
+#include "its/IntrinsicTactileSensing.hpp"
 #include "its/SoftIntrinsicTactileSensing.hpp"
 
 
@@ -8,6 +9,7 @@ using namespace soft_its;
 
 
 // Soft Intrinsic Tactile Sensing variables
+its::IntrinsicTactileSensing ITS;                   // ITS Object for rigid fingartip to use as initialization
 SoftIntrinsicTactileSensing SITS;                   // SITS Object
 ContactSensingProblemSolution X0;                   // Initial Guess
 ExtendedContactSensingProblemSolution solution;     // Extended CSP Solution
@@ -89,6 +91,11 @@ int main(int argc, char **argv){
   SITS.setFingertipOrientation(roll,pitch,yaw);
   SITS.setFingertipStiffness(stiff_coeff[0], stiff_coeff[1]);
 
+  ITS.setFingertipSurface(finger_id,psa[0],psa[1],psa[2]);
+  ITS.setFingertipDisplacement(dispX,dispY,dispZ);
+  ITS.setFingertipOrientation(roll,pitch,yaw);
+  
+
   nh.param<bool>("soft_its/algorithm/verbose", verbose, false);
   nh.param<double>("soft_its/algorithm/force_threshold",force_th, 0.0);
   nh.param<std::string>("soft_its/algorithm/method/name",solver_name, "Levenberg-Marquardt");
@@ -112,13 +119,6 @@ int main(int argc, char **argv){
     solver = ContactSensingProblemMethod::Levenberg_Marquardt;
   }
 	std::cout<<green<<"Solver: "<<solver_name<<reset<<std::endl;
-
-
-  // Set initial guess
-  //X0.c = {0,0,psa[2]};
-  X0.c = {0,0,psa[2]/2};
-  X0.K = 0;
-  X0.Dd = 0;
   
   // Declaring Subscriber
   ros::Subscriber ft_sub = nh.subscribe(SITS.sensor_id+"/netft_data", 100, ftCallback);
@@ -137,6 +137,10 @@ int main(int argc, char **argv){
     if (new_measure){
         // solve ContactSensingProblem
         ros::Time start_time(ros::Time::now());
+        if (solver == ContactSensingProblemMethod::Gauss_Newton || solver == ContactSensingProblemMethod::Levenberg_Marquardt){
+          ITS.solveContactSensingProblemCF(f, m, force_th);
+          X0.c = ITS.X.c; X0.K = ITS.X.K;
+        }
         int step = SITS.solveContactSensingProblem(X0, f, m, force_th, solver, count_max, stop_th, eps, verbose);
         ros::Time stop_time(ros::Time::now());
         new_measure = false;

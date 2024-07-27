@@ -66,12 +66,13 @@ class DataLogger:
         self.csv_writer_all.writerow(['Experiment', 'Timestamp [ms]',
                                       'Indentation_cmd [mm]', 'Indentation_meas [mm]', 'Theta [deg]',
                                       'real_CC_x [mm]','real_CC_y [mm]','real_CC_z [mm]',
-                                      'CC_x [mm]','CC_y [mm]','CC_z [mm]', 'e [mm]','e_norm [%]'
+                                      'CC_x [mm]','CC_y [mm]','CC_z [mm]', 'e [mm]','e_norm [%]',
                                       'Fn [N]','Ft_x [N]','Ft_y [N]','Ft_z [N]','T [Nmm]',
-                                      'PoC_x [mm]','PoC_y [mm]','PoC_z [mm]','Delta_d_hat [mm]'])
+                                      'PoC_x [mm]','PoC_y [mm]','PoC_z [mm]','Delta_d_hat [mm]',
+                                      'theta_hat [mm]','Convergence_time [mm]',])
         
         # Initialize service
-        self.register = False                                                   # Enable log
+        self.register = False       # Enable log    
         
         # GROUND TRUTH TABLE
         #
@@ -81,11 +82,12 @@ class DataLogger:
         #   4 mm    |   (0,0,0.74)   |  (0,-0.2,0.74)    |  (0,-0.43,0.74)
 
         self.real_cc = np.array([0,0,0.8],dtype=float)                          # <---- Real Contact Centroid in {B} [mm]
-        self.real_theta = 0                                                     # <---- Real Theta [deg]
+        self.real_theta = 30                                                    # <---- Real Theta [deg]
 
         self.real_indent = []                                                   # Measured indentation from Franka [mm]
         self.forces = []                                                        # Force measurment norm [N]
         self.e_cc = []                                                          # Contac Centroid error array [mm]
+        self.e_perc_cc = []                                                          # Contac Centroid error array percentage
 
         self.cc_x = []                                                          # Contac Centroid array x-value [mm]
         self.cc_y = []                                                          # Contac Centroid array y-value [mm]
@@ -120,7 +122,7 @@ class DataLogger:
 
         print("Hi from Soft ITS Logger")  
         self.rate = rospy.Rate(20)              # Change the rate as needed
-        self.thread = threading.Thread(target=self.loop)
+        self.thread = threading.Thread(target=self.thread_loop)
         self.thread.daemon = True
         self.thread.start()
 
@@ -131,9 +133,9 @@ class DataLogger:
         self.experiment = rospy.get_param('/num_exp')
         self.cmd_indentation = rospy.get_param('/indentation')
         self.solver = rospy.get_param('soft_its/algorithm/method/name')
-        self.real_cc = self.real_centroid(self.theta, self.meas_indentation, self.ell_params)
+        self.real_cc = self.real_centroid(self.real_theta, self.meas_indentation, params = self.ell_params)
         rospy.loginfo("Retrieved parameter: %d", self.experiment)
-        rospy.loginfo("Real Contact centroid at %.2f, %.2f, %.2f", self.real_cc)
+        rospy.loginfo("Real Contact centroid at %.2f, %.2f, %.2f", self.real_cc[0], self.real_cc[1], self.real_cc[2])
 
         self.register = True
         print('=====', self.register)
@@ -148,6 +150,7 @@ class DataLogger:
         mean_real_indent = np.mean(self.real_indent)
         mean_f = np.mean(self.forces)
         mean_e = np.mean(self.e_cc)
+        mean_e_perc = np.mean(self.e_perc_cc)
         
         mean_cc_x = np.mean(self.cc_x)
         mean_cc_y = np.mean(self.cc_y)
@@ -168,6 +171,7 @@ class DataLogger:
         std_real_indent = np.std(self.real_indent)
         std_f = np.std(self.forces)
         std_e = np.std(self.e_cc)
+        std_e_perc = np.std(self.e_perc_cc)
         std_cc_x = np.std(self.cc_x)
         std_cc_y = np.std(self.cc_y)
         std_cc_z = np.std(self.cc_z)
@@ -179,7 +183,7 @@ class DataLogger:
         std_T = np.std(self.T)
 
         std_dd = np.std(self.dd)
-        std_theta = np.std(self.theta*180.0/np.pi)
+        std_theta = np.std(180.0/np.pi*np.array(self.theta))
         std_time = np.std(self.times)
 
         # print summary
@@ -200,9 +204,10 @@ class DataLogger:
         self.csv_writer_its_std.writerow(row)
         
         # reset
-        self.real_indent = []   
+        self.real_indent = []
         self.forces = []   
         self.e_cc = []  
+        self.e_perc_cc = []  
 
         self.cc_x = []    
         self.cc_y = [] 
@@ -243,7 +248,6 @@ class DataLogger:
             T = data.T                                          # amplitude [Nmm] of local torque around normal
             dd = data.D
             e = np.linalg.norm(cc-self.real_cc)
-
             # Contact Centroid estimated angles [rad]
             theta = -np.arctan2(data.PoC.z,data.PoC.y)+np.pi/2
             
@@ -252,6 +256,11 @@ class DataLogger:
 
             # Append values
             self.e_cc.append(e)
+            try:
+                e_perc = e/self.real_indent[-1]
+                self.e_perc_cc.append(e_perc)
+            except:
+                e_perc = 0
             self.cc_x.append(cc[0])
             self.cc_y.append(cc[1])
             self.cc_z.append(cc[2])
@@ -312,17 +321,18 @@ class DataLogger:
     ##################
     # UTILs
     ##################
-    def real_centroid(self,theta,indentation,params):
+    def real_centroid(self, theta, indentation, params):
         x, y, z = sp.symbols('x y z')
         a,b,c = params
 
+        print(a,b,c,indentation,theta)
         ellipsoid = np.power(y/(b-indentation), 2) + np.power(z/(c-indentation), 2) - 1
         vertical = z - np.tan(np.pi/2 + theta/180.0*np.pi)*y
         
         solution = np.array(sp.solve([ellipsoid, vertical], [y, z]))
         solution = solution[solution[:, 1] > 0].flatten()
-        real_cc = np.array([0.0, solution[0], solution[1]])
-        
+        real_cc = np.array([0.0, solution[0], solution[1]],dtype=float)
+
         return real_cc
 
 
@@ -332,33 +342,40 @@ class DataLogger:
     ##################
 
     def thread_loop(self):
-        while not rospy.is_shutdown():        
-            timestamp = rospy.Time.now()
-            indentation_cmd = self.cmd_indentation
-            indentation_meas = self.real_indent[-1]
-            theta = self.real_theta
-            real_cc_x,real_cc_y,real_cc_z = self.real_cc
-            cc_x,cc_y,cc_z = [self.cc_x[-1],self.cc_y[-1],self.cc_z[-1]]
-            e = np.linalg.norm(np.array(cc_x,cc_y,cc_z)-self.real_cc)
-            e_norm = e/indentation_meas
-            Fn = self.Fn[-1]
-            Ft_x = self.Ft_x[-1]
-            Ft_y = self.Ft_y[-1]
-            Ft_z = self.Ft_z[-1]
-            T = self.T[-1]
-            PoC_x =self.PoC_x[-1]
-            PoC_y =self.PoC_y[-1]
-            PoC_z =self.PoC_z[-1]
-            Dd = self.dd[-1]
-            
-            row = [self.experiment, timestamp, 
-                   indentation_cmd,indentation_meas,theta,
-                   real_cc_x,real_cc_y,real_cc_z,
-                   cc_x,cc_y,cc_z,e,e_norm,
-                   Fn,Ft_x,Ft_y,Ft_z,T,
-                   PoC_x,PoC_y,PoC_z,Dd]          
-            self.csv_writer_all.writerow(row)
-
+        while not rospy.is_shutdown():    
+            if self.register:    
+                try:
+                    timestamp = rospy.Time.now()
+                    indentation_cmd = self.cmd_indentation
+                    indentation_meas = self.real_indent[-1]
+                    theta = self.real_theta
+                    real_cc_x,real_cc_y,real_cc_z = self.real_cc
+                    cc_x,cc_y,cc_z = [self.cc_x[-1],self.cc_y[-1],self.cc_z[-1]]
+                    e = np.linalg.norm(np.array([cc_x,cc_y,cc_z])-self.real_cc)
+                    e_norm = e/indentation_meas
+                    Fn = self.Fn[-1]
+                    Ft_x = self.Ft_x[-1]
+                    Ft_y = self.Ft_y[-1]
+                    Ft_z = self.Ft_z[-1]
+                    T = self.T[-1]
+                    PoC_x =self.PoC_x[-1]
+                    PoC_y =self.PoC_y[-1]
+                    PoC_z =self.PoC_z[-1]
+                    Dd = self.dd[-1]
+                    hat_theta = self.theta[-1] 
+                    convergence_time = self.times[-1]
+                    
+                    row = [self.experiment, timestamp, 
+                        indentation_cmd,indentation_meas,theta,
+                        real_cc_x,real_cc_y,real_cc_z,
+                        cc_x,cc_y,cc_z,e,e_norm,
+                        Fn,Ft_x,Ft_y,Ft_z,T,
+                        PoC_x,PoC_y,PoC_z,Dd, hat_theta,
+                        convergence_time]       
+                       
+                    self.csv_writer_all.writerow(row)
+                except:
+                    pass
             self.rate.sleep()
 
 

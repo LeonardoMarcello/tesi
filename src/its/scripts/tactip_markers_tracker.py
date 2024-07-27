@@ -48,7 +48,7 @@ class TacTipMarkersTracker:
         self.image = None                           # Current Raw TacTip Image
         self.old_image = None                       # Last Raw TacTip Image (used in Optic Flow evale)
         self.image_stamp = None                     # Current Raw TacTip Image timestamp
-        self.times = []                             # Elapsed time array (None to avoid log)
+        self.times = None                             # Elapsed time array (None to avoid log)
 
 
         # Subscriber to TacTip image data
@@ -67,6 +67,7 @@ class TacTipMarkersTracker:
 
     def __del__(self):
         # Close CSV file when the node is shutting down
+        print('AHO')
         if self.times is not None:
             print(f"Tracking Elapsed time: {np.mean(self.times)} (± {np.std(self.times)}) ms")
         

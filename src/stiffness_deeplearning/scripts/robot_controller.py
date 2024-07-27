@@ -33,8 +33,8 @@ from geometry_msgs.msg import Pose, PoseStamped, PointStamped, PoseArray
 import yaml
 from std_srvs.srv import Empty #service
 
-TABLE_HEIGHT = 0.0775   
-# 0.0775 -- 0 deg su livella; 0.0875 -- 15 deg su livella; 0.077 -- 30 deg
+TABLE_HEIGHT = 0.0775  
+# 0.077 -- 0 deg su livella; 0.087 -- 15 deg su livella; 0.077 -- 30 deg su tappo custodia TacTip
 # 0.016 -- Grasso sottile; 0.021 -- Arteria; 0.022 -- Grasso spesso; 0.017 -- Vena
 
 try:
@@ -110,7 +110,7 @@ class RobotController(object):
         self.error_recovery.wait_for_server()
         
         self.srv = Server(demo_tactip_cfgConfig, self.dyn_rec_callback)
-        INDENTATION = 0.002
+        INDENTATION = 0.004
         self.table_height = TABLE_HEIGHT - INDENTATION                                  # <--- Indentation in m, (ori.  0.010)
         rospy.set_param('/indentation', INDENTATION*1000.0) 
 

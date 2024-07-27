@@ -31,10 +31,10 @@ fingertip:
   id: DigiTac v1.5          # Fingertip name id
   displacement:             # Displacement [mm] Fingertip Frame {B} w.r.t Sensor Frame {S}
       x: .0                 #   .0   |  .0    | .0
-      y: .0                 #   .0   |  .0    | .0
-      z: 40                 #   40   |  50    | 60
+      y: 0                  #   1.5  |  5   | .0
+      z: 60                 #   40   |  50    | 60
   orientation:              # Orientation [rad] Fingertip Frame {B} w.r.t Sensor Frame {S} in Roll-Pitch-Yaw encoding
-      roll: .0 #-0.523599              #   .0   |  -0.261799 (15deg)  | -0.523599 (30deg)
+      roll: -0.523599              #   .0   |  -0.261799 (15deg)  | -0.523599 (30deg)
       pitch: .0             #   .0   |  .0                 | .0
       yaw: .0               #   .0   |  .0                 | .0
   principalSemiAxis:                # Fingertip Surfaces principal Semi-Axis
@@ -105,7 +105,7 @@ soft_its:
   algorithm:                                # Soft Intrinsic Tactile Sensing solver
     verbose: false                          # print output on each step
     #force_threshold: 0.5                    # Force threshold to enable solver [N]
-    force_threshold: 0.1                    # Force threshold to enable solver [N]
+    force_threshold: 0.09                    # Force threshold to enable solver [N]
     method: 
         #name: Levenberg-Marquardt           # solver method (Default Levenberg-Marquardt)
         #name: Gauss-Newton           

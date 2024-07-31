@@ -159,7 +159,7 @@ class IntrinsicTactileSensing{
         static void jacobian_contact_sensing_problem(double *x, double *jac, int m, int n, void *data);
     
     public:
-        virtual int solveContactSensingProblemOptim(ContactSensingProblemSolution X0 ,Eigen::Vector3d f, Eigen::Vector3d m, OptimLM params);
+        int solveContactSensingProblemOptim(ContactSensingProblemSolution X0, Eigen::Vector3d f, Eigen::Vector3d m, OptimLM params);
         virtual void setLMParameters(double forceThreshold = 0.0, int count_max = 100, double stop_th = 0.005, double epsilon = 0.005, bool verbose = false);      
 
 };

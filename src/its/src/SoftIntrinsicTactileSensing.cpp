@@ -71,8 +71,9 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblem(Eigen::Vector3d f, E
     switch (method)
     {
     case its::ContactSensingProblemMethod::Levenberg_Marquardt:
-        return solveContactSensingProblemLM(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
-
+        //return solveContactSensingProblemLM(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
+        return solveContactSensingProblemOptim(X0,f,m,this->params);
+        
     case its::ContactSensingProblemMethod::Gauss_Newton:
         return solveContactSensingProblemGN(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
 
@@ -554,4 +555,136 @@ ExtendedContactSensingProblemSolution SoftIntrinsicTactileSensing::getExtendedSo
     csps.Dd = this->X.Dd;
 
     return csps; 
+}
+
+/* Routines for Optimized Solver by using levmar.h */
+
+void SoftIntrinsicTactileSensing::soft_contact_sensing_problem(double *x, double *g, int m, int n, void *data){
+    double fx,fy,fz,mx,my,mz, a,b,c, e1,e2;    
+    double input[11];
+	memcpy(&input,data,11*sizeof(double));
+    fx = input[0]; fy = input[1]; fz = input[2]; 
+    mx = input[3]; my = input[4]; mz = input[5];
+    a = input[6]; b = input[7]; c = input[8]; 
+    e1 = input[9]; e2 = input[10];
+
+    // Solution: x = [cx, cy, cz, k, Dd]
+    // Soft Contact Sensing Ptoblem: x t.c. g(x) = 0
+    double norm[] = {2*x[0]/((a-x[4])*(a-x[4])), 2*x[1]/((b-x[4])*(b-x[4])), 2*x[2]/((c-x[4])*(c-x[4]))};               // normal at cc \/S(x)
+    double mag_norm = sqrt(norm[0]*norm[0] + norm[1]*norm[1] + norm[2]*norm[2]);                                        // norm ||\/S(x)||_2        
+    g[0] = 2*x[3]*x[0]/((a-x[4])*(a-x[4])) - fy*x[2] + fz*x[1] - mx;                                                    // torque direction condition 
+    g[1] = 2*x[3]*x[1]/((b-x[4])*(b-x[4])) - fz*x[0] + fx*x[2] - my;                                                    // ...
+    g[2] = 2*x[3]*x[2]/((c-x[4])*(c-x[4])) - fx*x[1] + fy*x[0] - mz;                                                    // ...
+    g[3] = (x[0]*x[0])/((a-x[4])*(a-x[4])) + (x[1]*x[1])/((b-x[4])*(b-x[4])) + (x[2]*x[2])/((c-x[4])*(c-x[4])) - 1;     // point on surface 
+    g[4] = -(fx*norm[0] + fy*norm[1] + fz*norm[2])/mag_norm - e1*x[4] - e2*x[4]*x[4];                                   // Force-deformation relationship: f'n-h(dD)'n = 0 
+}
+void SoftIntrinsicTactileSensing::jacobian_soft_contact_sensing_problem(double *x, double *jac, int m, int n, void *data){
+    double fx,fy,fz,mx,my,mz, a,b,c, e1,e2;    
+    double input[11];
+	memcpy(&input,data,11*sizeof(double));
+    fx = input[0]; fy = input[1]; fz = input[2]; 
+    mx = input[3]; my = input[4]; mz = input[5];
+    a = input[6]; b = input[7]; c = input[8]; 
+    e1 = input[9]; e2 = input[10];
+    
+    // Eval J = dg/dx(x)
+    // dg1/dx
+    jac[0] = 2*x[3]/(a*a);                                       
+    jac[1] = fz;                                       
+    jac[2] = -fy;                                       
+    jac[3] = 2*x[0]/(a*a);    
+    jac[4] = 4*x[3]*x[0]/((a-x[4])*(a-x[4])*(a-x[4]));         
+    // dg2/dx
+    jac[5] = -fz;                                       
+    jac[6] = 2*x[3]/(b*b);                                       
+    jac[7] = fx;                                       
+    jac[8] = 2*x[1]/(b*b);   
+    jac[9] = 4*x[3]*x[1]/((b-x[4])*(b-x[4])*(b-x[4]));           
+    // dg3/dx
+    jac[10] = fy;                                       
+    jac[11] = -fx;                                       
+    jac[12] = 2*x[3]/(c*c);                                       
+    jac[13] = 2*x[2]/(c*c);     
+    jac[14] = 4*x[3]*x[2]/((b-x[4])*(b-x[4])*(b-x[4]));          
+    // dg4/dx
+    jac[15] = 2*x[0]/(a*a);                                       
+    jac[16] = 2*x[1]/(b*b);                                       
+    jac[17] = 2*x[2]/(c*c);                                       
+    jac[18] = 0; 
+    jac[19] = 2*x[0]*x[0]/((a-x[4])*(a-x[4])*(a-x[4])) + 2*x[1]*x[1]/((b-x[4])*(b-x[4])*(b-x[4])) + 2*x[2]*x[2]/((c-x[4])*(c-x[4])*(c-x[4]));    
+    // dg5/dx
+    jac[20] = - 2*fx/(a*a);                                       
+    jac[21] = - 2*fy/(b*b);                                       
+    jac[22] = - 2*fz/(c*c);           
+    jac[23] = 0;                 // ??                                    
+    jac[24] = - e1 - 2*e2*x[4];    
+}
+
+int SoftIntrinsicTactileSensing::solveContactSensingProblemOptim(ContactSensingProblemSolution X0 ,Eigen::Vector3d f, Eigen::Vector3d m, its::OptimLM params){
+    // store measure
+    this->f = f;                // [N]
+    this->m = m;                // [Nm]
+    
+    // check threshold condition
+    if(f.norm()< params.force_threshold){
+        return -1;
+    }
+    // Fingertip model
+    const double a = this->fingertip.model.principalAxisCoeff[0];      // Ellipsoid Principal Axis Coefficients [mm]
+    const double b = this->fingertip.model.principalAxisCoeff[1];
+    const double c = this->fingertip.model.principalAxisCoeff[2];
+    // Fingertip model
+    const double e1 = this->fingertip.model.stiffnessCoefficients[0];   // Surface stiffness coefficients
+    const double e2 = this->fingertip.model.stiffnessCoefficients[1];
+
+    const Eigen::Vector3d d_sb =  this->fingertip.displacement;
+    const Eigen::Matrix3d R_sb =  this->fingertip.orientation;
+
+    // F/T Sensor measures
+    Eigen::Vector3d tmp = R_sb*f;       // Force Measure [N] w.r.t Fingertip Frame, {B}
+    const double px = tmp(0);      
+    const double py = tmp(1);
+    const double pz = tmp(2);
+    const Eigen::Vector3d p =  {px, py, pz};
+    
+    tmp = R_sb*(m + f.cross(d_sb/1000.0));     // Torque Measure [Nm] w.r.t Fingertip Frame, {B}
+    const double tx = tmp(0)*1000.0;           // convering in [Nmm]
+    const double ty = tmp(1)*1000.0;
+    const double tz = tmp(2)*1000.0;
+    const Eigen::Vector3d t =  {tx, ty, tz};
+
+    // Set variable for LM solver 
+    double x[4] = {X0.c(0),X0.c(1),X0.c(2),X0.K};                   // initial guess x0
+    double data[11] = {p(0),p(1),p(2), t(0),t(1),t(2), a, b, c, e1, e2};     // measures and params
+  
+	int step = dlevmar_der(this->soft_contact_sensing_problem, this->jacobian_soft_contact_sensing_problem, x, NULL, params.m, params.n, params.itmax, params.opt, params.info, NULL, NULL, data);
+    //int step = dlevmar_dif(this->contact_sensing_problem, x, NULL, params.m, params.n, params.itmax, params.opt, params.info, NULL, NULL, data);
+
+
+    this->X.c(0) = x[0]; this->X.c(1) = x[1]; this->X.c(2) = x[2]; this->X.K = x[3]; this->X.Dd = x[4];
+
+    if (params.verbose){
+        std::cout << "Reason of termination:\t" << params.info[6] << std::endl;
+        std::cout << "Num of Step:\t" << params.info[5] << std::endl;
+        std::cout << "Error ||e||_2 at initial guess ("<< X0.c(0) << ", " << X0.c(1) << ", " << X0.c(2) << ", " << X0.K << "):\t" << params.info[0] << std::endl;
+        std::cout << "Error ||e||_2 at solution:\t" << params.info[1] << std::endl;
+        std::cout << "Last value of ||J^T g ||_inf:\t" << params.info[2] << std::endl;
+        std::cout << "Last step ||delta_x||_2:\t" << params.info[3] << std::endl;
+        std::cout << "lambda at solution:\t" << params.info[4] << std::endl;
+    }    
+    return step; 
+
+}
+
+void SoftIntrinsicTactileSensing::setLMParameters(double forceThreshold, int count_max, double stop_th, double epsilon, bool verbose){
+
+    this->params.force_threshold = forceThreshold;
+    this->params.itmax = count_max;
+    this->params.m = 5; this->params.n = 5;
+    this->params.verbose = verbose;
+
+    this->params.opt[0] =  1e2;                                // mu init (lambda = mu*max{J^T J} )
+    this->params.opt[1] = 1e-15;                                // stop threshold on ||J^T e||_inf 
+    this->params.opt[2] = 1e-15;                                // stop threshold on ||Dp||_2
+    this->params.opt[3] = stop_th;                              // stop threshold on ||e||_2
 }

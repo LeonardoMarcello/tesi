@@ -113,6 +113,7 @@ int main(int argc, char **argv){
   const std::string reset("\033[0m");
   if (solver_name=="Levenberg-Marquardt"){
     solver = its::ContactSensingProblemMethod::Levenberg_Marquardt;
+    SITS.setLMParameters(force_th, count_max, stop_th, eps, verbose);
   }else if(solver_name=="Gauss-Newton"){
     solver = its::ContactSensingProblemMethod::Gauss_Newton;
   }else if(solver_name=="Closed-Form"){

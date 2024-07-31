@@ -106,7 +106,7 @@ soft_its:
   algorithm:                                # Soft Intrinsic Tactile Sensing solver
     verbose: false                          # print output on each step
     #force_threshold: 0.5                    # Force threshold to enable solver [N]
-    force_threshold: 0.06                    # Force threshold to enable solver [N]
+    force_threshold: 0.5                    # Force threshold to enable solver [N]
     method: 
         name: Levenberg-Marquardt           # solver method (Default Levenberg-Marquardt)
         #name: Gauss-Newton           

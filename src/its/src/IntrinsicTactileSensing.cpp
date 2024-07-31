@@ -436,8 +436,8 @@ void IntrinsicTactileSensing::contact_sensing_problem(double *x, double *g, int 
     mx = input[3]; my = input[4]; mz = input[5];
     a = input[6]; b = input[7]; c = input[8]; 
     
-    // x = [cx, cy, cz, k]
-    // g(x) = 0
+    // Solution: x = [cx, cy, cz, k, Dd]
+    // Soft Contact Sensing Ptoblem: x t.c. g(x) = 0
     g[0] = 2*x[3]*x[0]/(a*a) - fy*x[2] + fz*x[1] - mx;                                         // torque direction condition 
     g[1] = 2*x[3]*x[1]/(b*b) - fz*x[0] + fx*x[2] - my;                                         // ...
     g[2] = 2*x[3]*x[2]/(c*c) - fx*x[1] + fy*x[0] - mz;                                         // ...

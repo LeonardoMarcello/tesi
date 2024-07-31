@@ -115,6 +115,7 @@ int main(int argc, char **argv){
   const std::string reset("\033[0m");
   if (solver_name=="Levenberg-Marquardt"){
     solver = ContactSensingProblemMethod::Levenberg_Marquardt;
+    ITS.setLMParameters(force_th, count_max, stop_th, eps, verbose);
   }else if(solver_name=="Gauss-Newton"){
     solver = ContactSensingProblemMethod::Gauss_Newton;
   }else if(solver_name=="Closed-Form"){
@@ -148,7 +149,7 @@ int main(int argc, char **argv){
     if (new_measure){
         // solve ContactSensingProblem
         ros::Time start_time(ros::Time::now());
-        int step = ITS.solveContactSensingProblem(X0, f, m, force_th, solver, count_max, stop_th, eps, verbose);
+        int step = ITS.solveContactSensingProblem(f, m, force_th, solver, X0, count_max, stop_th, eps, verbose);
         ros::Time stop_time(ros::Time::now());
         new_measure = false;
 
@@ -163,10 +164,10 @@ int main(int argc, char **argv){
                       solution.PoC(0), solution.PoC(1), solution.PoC(2),
                       solution.fn, solution.t);
           if(step < count_max){
-            ROS_INFO("ITS algorithm runs for %i step. Elapsed time = %f ms", step, (stop_time.nsec - start_time.nsec)/1e6);
+            ROS_INFO("ITS algorithm runs for %i step. Elapsed time = %f ms", step, (stop_time - start_time).sec*1e3 + static_cast< float >((stop_time - start_time).nsec)/1e6);
           }
           else{
-            ROS_WARN("ITS algorithm needs more than %i step. Elapsed time = %f ms", count_max, (stop_time.nsec - start_time.nsec)/1e6);
+            ROS_WARN("ITS algorithm needs more than %i step. Elapsed time = %f ms", count_max, (stop_time - start_time).sec*1e3 + static_cast< float >((stop_time - start_time).nsec)/1e6);
           }
           ROS_INFO("%s",std::string(40, '-').c_str());
 
@@ -181,7 +182,7 @@ int main(int argc, char **argv){
           sol_msg.Ft.x = solution.ft(0); sol_msg.Ft.y = solution.ft(1); sol_msg.Ft.z = solution.ft(2);
           sol_msg.T = solution.t;
           sol_msg.D = psa_at_rest[0]-ITS.fingertip.model.principalAxisCoeff[0];
-          sol_msg.convergence_time = (stop_time.nsec - start_time.nsec)/1e6;
+          sol_msg.convergence_time = (stop_time - start_time).sec*1e3 + static_cast< float >((stop_time - start_time).nsec)/1e6;
 
           solution_pub.publish(sol_msg);
 

@@ -1,19 +1,97 @@
 #!/usr/bin/env python3
 
 import rospy
-from geometry_msgs.msg import WrenchStamped, PoseStamped
-from its_msgs.msg import SoftContactSensingProblemSolution
+from geometry_msgs.msg import WrenchStamped, PoseStamped, TransformStamped
+import tf
+
+from its_msgs.msg import SoftContactSensingProblemSolution, TacTipDensity
 from std_srvs.srv import Empty, EmptyResponse
 import csv
 import os
+import time
 import numpy as np
 import sympy as sp
 import threading
+
+
+import moveit_commander
+import tactip_gaussian_kernel as tgk
+        
+# GROUND TRUTH TABLE
+#
+#           |    0 degrees   |    15 degrees     |    30 degrees
+#   0 mm    |   (0,0,4.74)   |  (0,-1.27,4.73)   |  (0,-2.71,4.69)
+#   2 mm    |   (0,0,2.74)   |  (0,-0.73,2.73)   |  (0,-1.57,2.72)
+#   3 mm    |   (0,0,1.74)   |  (0,-0.47,1.74)   |  (0,-1,1.73)
+#   4 mm    |   (0,0,0.74)   |  (0,-0.2,0.74)    |  (0,-0.43,0.74)
+
+class FrankaPosition:
+    def __init__(self):
+        moveit_commander.roscpp_initialize([])
+        self.robot = moveit_commander.RobotCommander()
+        self.group_name = "panda_arm"  
+        self.reference_frame = "world"  # Replace with your desired reference frame
+        self.move_group = moveit_commander.MoveGroupCommander(self.group_name)
+        self.move_group.set_end_effector_link("brush")
+        self.end_effector_link = self.move_group.get_end_effector_link()
+
+        self.tf_listener = tf.TransformListener()
+
+        self.x0 = np.array([.0, .0, .0])          # centro B in {F} [m]
+
+        self.x = np.array([.0, .0, .0])           # Current Position in {B} [m]
+        self.c0 = np.array([.0, -2.71,4.69])      # contact point B in {B} [mm]
+        self.x_start = np.array([.0, .0, .0])     # Posizione pre-grasp in {B}
+
+        self.contact = False                      # Condizione di contatto
+
+    def get_end_effector_position(self):
+        end_effector_pose = PoseStamped()
+        end_effector_pose.pose = self.move_group.get_current_pose(self.end_effector_link).pose        
+        end_effector_pose.header.frame_id = self.reference_frame
+
+        ee_in_table = self.tf_listener.transformPose("/table_link", end_effector_pose)
+        fingertip_id = rospy.get_param('fingertip/id')
+        ee_in_fingertip = self.tf_listener.transformPose(fingertip_id, end_effector_pose)
+
+        self.x = np.array([ee_in_fingertip.pose.position.x, ee_in_fingertip.pose.position.y, ee_in_fingertip.pose.position.z])
+
+        return ee_in_table, ee_in_fingertip
+    
+    def set_center(self):
+        ee,_ = self.get_end_effector_position()
+        x = ee.pose.position.x
+        y = ee.pose.position.y
+        z = ee.pose.position.z
+
+        self.x0 = np.array([x,y,z])
+
+    def set_contact_point(self):
+        ee,_ = self.get_end_effector_position()
+        x = ee.pose.position.x
+        y = ee.pose.position.y
+        z = ee.pose.position.z
+
+        self.c0 = np.array([x,y,z])
+
+    def get_indentation(self):
+        ee,_ = self.get_end_effector_position()
+        x = ee.pose.position.x
+        y = ee.pose.position.y
+        z = ee.pose.position.z
+
+        c = np.array([x,y,z])
+        delta = c - self.c0
+
+        return delta[2]
 
 class DataLogger:
     def __init__(self):
         
         rospy.init_node('its_data_logger_node', anonymous=True)
+
+        self.real_cc = np.array([0,0,0.8],dtype=float)                                      # <---- Real Contact Centroid in {B} [mm]
+        self.real_theta = rospy.get_param("fingertip/orientation/roll",0.0)/np.pi*180       # <---- Real Theta [deg]
         
         # Parameters (Ellipsoid size for real cc estimation)
         a = rospy.get_param("fingertip/principalSemiAxis/a", 20)
@@ -21,28 +99,23 @@ class DataLogger:
         c = rospy.get_param("fingertip/principalSemiAxis/c", 20)
         self.ell_params = [a, b, c] 
 
+        # Object for retrieval of GroundTrut
+        try:
+            self.franka = FrankaPosition()
+            self.franka.theta = self.real_theta
+        except Exception as e:
+            print(e)
 
-        # Initialize CSV file 
-        # summary of ITS solver of each experiment
-        self.csv_filename_its = 'soft_its_data.csv'
-        self.csv_file_its = open(self.csv_filename_its, 'w')
-        self.csv_writer_its = csv.writer(self.csv_file_its)
-        self.csv_writer_its.writerow(['Experiment', 'Indentation [N]', 'force [N]', 
-                                      'CC_x [mm]','CC_y [mm]','CC_z [mm]','Delta_d_hat [mm]',
-                                      'Fn [N]','Ft_x [N]','Ft_y [N]','Ft_z [N]','T [Nmm]',
-                                      'Theta_hat [deg]', 'Elapsed Time [ms]', 'Solver'])
-        
-        # summary of ITS solver std daviation of each experiment
-        self.csv_filename_its_std = 'soft_its_std_data.csv'
-        self.csv_file_its_std = open(self.csv_filename_its_std, 'w')
-        self.csv_writer_its_std = csv.writer(self.csv_file_its_std)
-        self.csv_writer_its_std.writerow(['Experiment', 'Indentation [N]', 'force [N]', 
-                                      'CC_x [mm]','CC_y [mm]','CC_z [mm]','Delta_d_hat [mm]',
-                                      'Fn [N]','Ft_x [N]','Ft_y [N]','Ft_z [N]','T [Nmm]',
-                                      'Theta_hat [deg]', 'Elapsed Time [ms]', 'Solver'])
-        
+        self.tfBroad = tf.TransformBroadcaster()
+        #self.setFrame()                                            # <---------------- Rimettere
+
+        # Initialize CSV file     
+        DATE = time.strftime('%d_%m_%Y')
+        dir = os.path.join(os.path.join("data",DATE))    
+        if not os.path.exists(dir):
+            os.mkdir(dir)
         # extended results of ITS solver of each experiment
-        self.csv_filename_its_ext = 'soft_its_ext_data.csv'
+        self.csv_filename_its_ext = os.path.join(dir,'soft_its_ext_data.csv')                 #<--- desired csv name here
         self.csv_file_its_ext = open(self.csv_filename_its_ext, 'w')
         self.csv_writer_its_ext = csv.writer(self.csv_file_its_ext)
         self.csv_writer_its_ext.writerow(['Experiment', 'Timestamp [ms]',
@@ -51,16 +124,19 @@ class DataLogger:
                                         'Theta_hat [deg]', 'Elapsed Time [ms]'])
         
         # extended vision based initial guess of each experiment
-        self.csv_filename_vision = 'vision_data.csv'
+        self.csv_filename_vision = os.path.join(dir,'vision_data.csv')                 #<--- desired csv name here
         self.csv_file_vision = open(self.csv_filename_vision, 'w')
         self.csv_writer_vision = csv.writer(self.csv_file_vision)
         self.csv_writer_vision.writerow(['Experiment', 'Timestamp [ms]',
                                         'CC_x [mm]','CC_y [mm]','CC_z [mm]','Delta_d_hat [mm]'])
-        
-
-        
-        # All
-        self.csv_filename_all = 'all_data.csv'
+        # extended vision based initial guess of each experiment
+        self.csv_filename_gaussian = os.path.join(dir,'gaussian_data.csv')                 #<--- desired csv name here
+        self.csv_file_gaussian = open(self.csv_filename_gaussian, 'w')
+        self.csv_writer_gaussian = csv.writer(self.csv_file_gaussian)
+        self.csv_writer_gaussian.writerow(['Experiment', 'Timestamp [ms]','Integral'])
+                
+        # Sync all
+        self.csv_filename_all = os.path.join(dir,'all_data.csv')                 #<--- desired csv name here
         self.csv_file_all = open(self.csv_filename_all, 'w')
         self.csv_writer_all = csv.writer(self.csv_file_all)
         self.csv_writer_all.writerow(['Experiment', 'Timestamp [ms]',
@@ -69,25 +145,16 @@ class DataLogger:
                                       'CC_x [mm]','CC_y [mm]','CC_z [mm]', 'e [mm]','e_norm [%]',
                                       'Fn [N]','Ft_x [N]','Ft_y [N]','Ft_z [N]','T [Nmm]',
                                       'PoC_x [mm]','PoC_y [mm]','PoC_z [mm]','Delta_d_hat [mm]',
-                                      'theta_hat [mm]','Convergence_time [mm]',])
+                                      'theta_hat [mm]','Convergence_time [mm]',
+                                      'integral'])
         
         # Initialize service
         self.register = False       # Enable log    
-        
-        # GROUND TRUTH TABLE
-        #
-        #           |   0 degrees    |    15 degrees     |    30 degrees
-        #   2 mm    |   (0,0,2.74)   | (0,-0.73,2.73)    |  (0,-1.57,2.72)
-        #   3 mm    |   (0,0,1.74)   | (0,-0.47,1.74)    |  (0,-1,1.73)
-        #   4 mm    |   (0,0,0.74)   |  (0,-0.2,0.74)    |  (0,-0.43,0.74)
-
-        self.real_cc = np.array([0,0,0.8],dtype=float)                          # <---- Real Contact Centroid in {B} [mm]
-        self.real_theta = 30                                                    # <---- Real Theta [deg]
 
         self.real_indent = []                                                   # Measured indentation from Franka [mm]
         self.forces = []                                                        # Force measurment norm [N]
         self.e_cc = []                                                          # Contac Centroid error array [mm]
-        self.e_perc_cc = []                                                          # Contac Centroid error array percentage
+        self.e_perc_cc = []                                                     # Contac Centroid error array percentage
 
         self.cc_x = []                                                          # Contac Centroid array x-value [mm]
         self.cc_y = []                                                          # Contac Centroid array y-value [mm]
@@ -106,6 +173,7 @@ class DataLogger:
         self.dd = []                                                            # Deformation [ms]
         self.theta = []                                                         # CC solution angles array [rad]
         self.times = []                                                         # Times to convergence array [ms]
+        self.integrals = []                                                         # Times to convergence array [ms]
         self.slover = ""                                                        # ITS solver name
 
         self.experiment = 0                                                     # Num of experiment
@@ -113,22 +181,33 @@ class DataLogger:
         self.meas_indentation = 0                                               # Measured indentation
         self.save = rospy.Service('soft_csp/save_data', Empty, self.handle_save_data)
         self.stop = rospy.Service('soft_csp/stop_save_data', Empty, self.handle_stop_save_data)
+        self.set_b = rospy.Service('soft_csp/set_b', Empty, self.handle_set_B)
 
         # Subscribe to softITS solver and force topic
         self.vision_subscriber = rospy.Subscriber('soft_csp/initial_guess', SoftContactSensingProblemSolution, self.vision_callback) 
         self.softITS_subscriber = rospy.Subscriber('soft_csp/solution', SoftContactSensingProblemSolution, self.its_callback) 
         self.ft_subscriber = rospy.Subscriber('ft_sensor_tactip/netft_data', WrenchStamped, self.ft_callback) 
-        self.indent_subscriber = rospy.Subscriber('indentation', PoseStamped, self.indent_callback) 
+        self.density_subscriber = rospy.Subscriber("tactip/markers_density", TacTipDensity, self.density_callback) 
+        self.indent_subscriber = rospy.Subscriber("indent", PoseStamped, self.indent_callback) #<--------------------------- Togliere
+        rospy.set_param('/num_exp',1)                                                                   #<--------------------------- Togliere
+        rospy.set_param('/indentation',4)                                                               #<--------------------------- Togliere
 
-        print("Hi from Soft ITS Logger")  
         self.rate = rospy.Rate(20)              # Change the rate as needed
         self.thread = threading.Thread(target=self.thread_loop)
         self.thread.daemon = True
-        self.thread.start()
 
     ##################
     # SERVICEs
     ##################
+    def handle_set_B(self, request):
+        try:
+            self.franka.set_center()
+            rospy.loginfo("Fingertip frame B setted at %.2f, %.2f, %.2f [mm]", self.franka.x0[0]*1000.0, self.franka.x0[1]*1000.0, self.franka.x0[2]*1000.0)
+        except Exception as error:
+            rospy.loginfo(error)
+        
+        return EmptyResponse()
+    
     def handle_save_data(self, request):
         self.experiment = rospy.get_param('/num_exp')
         self.cmd_indentation = rospy.get_param('/indentation')
@@ -144,64 +223,18 @@ class DataLogger:
     
     def handle_stop_save_data(self, request):
         self.register = False
+        #self.franka.contact = False                            #<------------------------- Rimettere
+        rospy.set_param('/num_exp',self.experiment+1)                            #<------------------------- togliere
         print('=====', self.register)  
         
         # Eval mean
-        mean_real_indent = np.mean(self.real_indent)
-        mean_f = np.mean(self.forces)
-        mean_e = np.mean(self.e_cc)
-        mean_e_perc = np.mean(self.e_perc_cc)
-        
         mean_cc_x = np.mean(self.cc_x)
         mean_cc_y = np.mean(self.cc_y)
         mean_cc_z = np.mean(self.cc_z)
-        
-        mean_Fn = np.mean(self.Fn)
-        mean_Ft_x = np.mean(self.Ft_x)
-        mean_Ft_y = np.mean(self.Ft_y)
-        mean_Ft_z = np.mean(self.Ft_z)
-        mean_T = np.mean(self.T)
-        
-        mean_dd = np.mean(self.dd)
         mean_theta = np.mean(self.theta)*180.0/np.pi
-        mean_time = np.mean(self.times)
-        name = self.solver
-
-        # Eval std. dev
-        std_real_indent = np.std(self.real_indent)
-        std_f = np.std(self.forces)
-        std_e = np.std(self.e_cc)
-        std_e_perc = np.std(self.e_perc_cc)
-        std_cc_x = np.std(self.cc_x)
-        std_cc_y = np.std(self.cc_y)
-        std_cc_z = np.std(self.cc_z)
-        
-        std_Fn = np.std(self.Fn)
-        std_Ft_x = np.std(self.Ft_x)
-        std_Ft_y = np.std(self.Ft_y)
-        std_Ft_z = np.std(self.Ft_z)
-        std_T = np.std(self.T)
-
-        std_dd = np.std(self.dd)
-        std_theta = np.std(180.0/np.pi*np.array(self.theta))
-        std_time = np.std(self.times)
 
         # print summary
         print(f"results:\n x:{mean_cc_x}\n y:{mean_cc_y}\n z: {mean_cc_z}\n theta: {mean_theta}")
-
-        # store mean
-        row = [self.experiment, mean_real_indent, mean_f, 
-               mean_cc_x,mean_cc_y,mean_cc_z, mean_dd,
-               mean_Fn,mean_Ft_x,mean_Ft_y,mean_Ft_z, mean_T,
-               mean_theta, mean_time, name]
-        self.csv_writer_its.writerow(row)
-
-        # Store std. dev
-        row = [self.experiment, std_real_indent, std_f, 
-               std_cc_x,std_cc_y,std_cc_z, std_dd,
-               std_Fn, std_Ft_x, std_Ft_y, std_Ft_z, std_T,
-               std_theta, std_time, name]
-        self.csv_writer_its_std.writerow(row)
         
         # reset
         self.real_indent = []
@@ -227,6 +260,8 @@ class DataLogger:
         self.PoC_y = []
         self.PoC_z = []
 
+        self.integrals = []
+
         return EmptyResponse()
 
 
@@ -236,11 +271,12 @@ class DataLogger:
 
     def its_callback(self, data):
         # Save Soft Contact Sensing Problem Solution
+        #if not self.franka.contact and np.linalg.norm(np.array([data.PoC.x,data.PoC.y,data.PoC.z])>0.001):     #<---- rimettere
+        #    self.franka.set_contact_point()
+        if not self.register: self.handle_save_data(None)                                                            #<---- togliere
+        
         if self.register == True:
-            # Short Table
-            # ---------------
-            # Contact Centroid error in {B} [mm]
-            cc = np.array([data.PoC.x,data.PoC.y,data.PoC.z])
+            cc = np.array([data.PoC.x,data.PoC.y,data.PoC.z])   # ITS Contact Centroid in {B} [mm]
             normal = np.array([data.n.x,data.n.y,data.n.z])     # normal direction to fingertip surfaces in PoC
             Fn = data.Fn                                        # amplitude [N] of normal force
             Ft = np.array([data.Ft.x,data.Ft.y,data.Ft.z])      # tangential force [N]
@@ -285,21 +321,12 @@ class DataLogger:
     def ft_callback(self, data):
         # Save Force measurement
         if self.register == True:
-
             # Force norm
             f = np.array([data.wrench.force.x,data.wrench.force.y,data.wrench.force.z])
             f = np.linalg.norm(f)
 
             # Append values
             self.forces.append(f)
-    
-    def indent_callback(self, data):
-        # Save indentation value measurement
-        self.meas_indentation = data.pose.position.z
-        if self.register == True:
-            # Measured indentation 
-            self.real_indent.append(self.meas_indentation)
-
             
     def vision_callback(self,data):
         # Save vision estimation
@@ -317,40 +344,87 @@ class DataLogger:
             row = [self.experiment, timestamp, cc_x, cc_y, cc_z, dz]
             self.csv_writer_vision.writerow(row)
         
-    
+    def density_callback(self,data):
+        # Save vision estimation
+        if self.register == True:
+            timestamp = data.header.stamp
+            density = data.density
+            delta_density = data.delta_density
+
+            ttgk = tgk.TacTipGaussianKernel()
+            ttgk.mm2pxl = rospy.get_param("tactip/mm2pxl", 15)
+            thr = rospy.get_param("markers_density/threshold", 0.33)
+            R_mask,_  = ttgk.contactRegion(density, density + delta_density, threshold=thr)
+            integral = ttgk.density_integration(density, density + delta_density, R_mask)
+
+            self.integrals.append(integral)
+            row = [self.experiment, timestamp, integral]
+            self.csv_writer_gaussian.writerow(row)
+                
+    def indent_callback(self,data):                                 # <---------------------------------- Togliere
+        # Save indent estim estimation
+        self.meas_indentation = data.pose.position.z
+        self.real_indent.append(self.meas_indentation)
+
     ##################
     # UTILs
     ##################
     def real_centroid(self, theta, indentation, params):
+        
+        
+        # Metodo A) intersezione con ellissoide
+        #        quadratic:      y = a*x + b*x^2 (Default)
         x, y, z = sp.symbols('x y z')
         a,b,c = params
 
         print(a,b,c,indentation,theta)
         ellipsoid = np.power(y/(b-indentation), 2) + np.power(z/(c-indentation), 2) - 1
-        vertical = z - np.tan(np.pi/2 + theta/180.0*np.pi)*y
+        vertical = z - np.tan(np.pi/2 - theta/180.0*np.pi)*y
         
         solution = np.array(sp.solve([ellipsoid, vertical], [y, z]))
         solution = solution[solution[:, 1] > 0].flatten()
         real_cc = np.array([0.0, solution[0], solution[1]],dtype=float)
+        
+        # Metodo B) da Franka position
+        # self.franka.get_end_effector_position()
+        #real_cc = self.franka.x/1000.0
+
 
         return real_cc
 
 
+    def setFrame(self):
+        # Set fingertip frame over table link
+        parent_frame_id = "table_link"
+        child_frame_id = rospy.get_param('fingertip/id')
+        t_stamp = rospy.Time.now()
+        x,y,z = self.franka.x0
+        r,p,y = (self.real_theta/180*np.pi, 0.0, 0.0)
+        
+        self.tfBroad.sendTransform((x, y, z),
+                                    tf.transformations.quaternion_from_euler(r, p, y),
+                                    t_stamp,
+                                    child_frame_id,
+                                    parent_frame_id)
 
     ##################
     # LOOP FUNCTION
     ##################
 
     def thread_loop(self):
-        while not rospy.is_shutdown():    
-            if self.register:    
-                try:
+        while not rospy.is_shutdown(): 
+            try: 
+                #self.setFrame()                                                 #<---------------------------------- Rimettere
+                #self.real_indent.append(self.franka.get_indentation())
+                #self.real_cc = self.franka.x
+
+                if self.register:   
                     timestamp = rospy.Time.now()
                     indentation_cmd = self.cmd_indentation
                     indentation_meas = self.real_indent[-1]
                     theta = self.real_theta
                     real_cc_x,real_cc_y,real_cc_z = self.real_cc
-                    cc_x,cc_y,cc_z = [self.cc_x[-1],self.cc_y[-1],self.cc_z[-1]]
+                    cc_x,cc_y,cc_z = [self.cc_x[-1], self.cc_y[-1], self.cc_z[-1]]
                     e = np.linalg.norm(np.array([cc_x,cc_y,cc_z])-self.real_cc)
                     e_norm = e/indentation_meas
                     Fn = self.Fn[-1]
@@ -358,12 +432,13 @@ class DataLogger:
                     Ft_y = self.Ft_y[-1]
                     Ft_z = self.Ft_z[-1]
                     T = self.T[-1]
-                    PoC_x =self.PoC_x[-1]
-                    PoC_y =self.PoC_y[-1]
-                    PoC_z =self.PoC_z[-1]
+                    PoC_x = self.PoC_x[-1]
+                    PoC_y = self.PoC_y[-1]
+                    PoC_z = self.PoC_z[-1]
                     Dd = self.dd[-1]
                     hat_theta = self.theta[-1] 
                     convergence_time = self.times[-1]
+                    integral = self.integrals[-1]
                     
                     row = [self.experiment, timestamp, 
                         indentation_cmd,indentation_meas,theta,
@@ -371,25 +446,27 @@ class DataLogger:
                         cc_x,cc_y,cc_z,e,e_norm,
                         Fn,Ft_x,Ft_y,Ft_z,T,
                         PoC_x,PoC_y,PoC_z,Dd, hat_theta,
-                        convergence_time]       
-                       
+                        convergence_time, integral]       
+                    
                     self.csv_writer_all.writerow(row)
-                except:
-                    pass
+            except:
+                pass
+
             self.rate.sleep()
 
 
-
-
     def run(self):
+        print("Hi from Soft ITS Logger")  
+        self.thread.start()
         rospy.spin()
+
 
     def __del__(self):
         # Close CSV file when the node is shutting down
-        if not self.csv_file_its.closed :
-            self.csv_file_its.close()
+        if not self.csv_file_its_ext.closed :
             self.csv_file_its_ext.close()
             self.csv_file_vision.close()
+            self.csv_file_gaussian.close()
             self.csv_file_all.close()
 
 if __name__ == '__main__':

@@ -62,8 +62,6 @@ class TacTipMarkersTracker:
         self.rate = rospy.Rate(24)  # Loop rate [Hz]
         self.thread = threading.Thread(target=self.thread_loop)
         self.thread.daemon = True
-        print("Hi from TacTip markers tracker")  
-        self.thread.start()
 
     def __del__(self):
         # Close CSV file when the node is shutting down
@@ -337,6 +335,8 @@ class TacTipMarkersTracker:
             self.rate.sleep()
 
     def run(self):
+        print("Hi from TacTip markers tracker")  
+        self.thread.start()
         rospy.spin()
 
 

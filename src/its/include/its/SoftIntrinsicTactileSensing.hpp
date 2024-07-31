@@ -12,6 +12,7 @@
 #include <Eigen/LU>
 
 #include "its/Fingertip.hpp"
+#include "its/IntrinsicTactileSensing.hpp"
 
 using namespace fingertip;
 
@@ -21,15 +22,6 @@ namespace soft_its {
     /* 
     *   TO DO: Descrizione libreria
     */
-
-// Contact Sensing problem solver methods
-enum class ContactSensingProblemMethod: unsigned short int {
-    Levenberg_Marquardt = 1,    
-    Gauss_Newton = 2,  
-    Closed_Form = 3,    // to do
-    Wrench_Method = 4,  // to do 
-};
-
 // Contact Sensing problem minimal solution
 struct ContactSensingProblemSolution{
 		Eigen::Vector3d c;      // Point of Contact position (PoC),[m]
@@ -46,12 +38,12 @@ struct ExtendedContactSensingProblemSolution{
     double t;               // Torque along normal in the point of contact (PoC), [Nm]
     double Dd;              // Surface Deformation, [mm]
 };
-class SoftIntrinsicTactileSensing{
+class SoftIntrinsicTactileSensing: public its::IntrinsicTactileSensing{
     public:
-        std::string sensor_id;                  // Sensor id
-        Fingertip fingertip;                    // Fingertip description (i.e. surface model, pose)
-        Eigen::Vector3d f;                      // Force measured from ATI sensor [N]
-        Eigen::Vector3d m;                      // Torque measured from ATI sensor [N]
+        //std::string sensor_id;                  // Sensor id
+        //Fingertip fingertip;                    // Fingertip description (i.e. surface model, pose)
+        //Eigen::Vector3d f;                      // Force measured from ATI sensor [N]
+        //Eigen::Vector3d m;                      // Torque measured from ATI sensor [N]
         ContactSensingProblemSolution X;        // Soft ITS Solution X = [c', K, Dd']
 
 
@@ -60,17 +52,17 @@ class SoftIntrinsicTactileSensing{
 		~SoftIntrinsicTactileSensing();
 
         // SET FINGERTIP DECRIPTION
-        bool setFingertipSurface(std::string id, double a = 1.0, double b = 1.0, double c = 1.0);
+        //bool setFingertipSurface(std::string id, double a = 1.0, double b = 1.0, double c = 1.0);
         /* setFingertipSurface:
         *       The Fingertip surface ellipsoid model  
         *       (x^2)/(a^2) + (y^2)/(b^2) + (z^2)/(c^2) = 1
         */
 
-		bool setFingertipDisplacement(double dispX, double dispY, double dispZ);
+		//bool setFingertipDisplacement(double dispX, double dispY, double dispZ);
         /* setFingertipDisplacement:
         *       The displacment w.r.t Force Sensor frame {S}
         */
-        bool setFingertipOrientation(double roll, double pitch, double yaw);
+        //bool setFingertipOrientation(double roll, double pitch, double yaw);
         /* setFingertipOrientation:
         *       The orientation w.r.t Force sensor frame {S} is achieved by roll-pitch-yaw encoding  
         *       Rot = Rz(yaw) * Ry(pitch) * Rz(roll)
@@ -96,9 +88,10 @@ class SoftIntrinsicTactileSensing{
 
 
         // Solve contact Sensing Problem
-        int solveContactSensingProblem(ContactSensingProblemSolution X0 ,Eigen::Vector3d f, Eigen::Vector3d t, double forceThreshold = 0.0,
-                                    ContactSensingProblemMethod method = ContactSensingProblemMethod::Levenberg_Marquardt,
-                                    int count_max = 100, double stop_th = 0.005, double epsilon = 0.1, bool verbose = false);
+        int solveContactSensingProblem(Eigen::Vector3d f, Eigen::Vector3d t, double forceThreshold = 0.0,
+                                    its::ContactSensingProblemMethod method = its::ContactSensingProblemMethod::Levenberg_Marquardt,
+                                    ContactSensingProblemSolution X0 = ContactSensingProblemSolution(), int count_max = 100, double stop_th = 0.005, 
+                                    double epsilon = 0.1, bool verbose = false);
         /* solveContactSensingProblem: 
         *       This routine implements different solver for Soft Contact Sensing Problem:
         *           Iterative Method:

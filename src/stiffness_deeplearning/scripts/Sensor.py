@@ -9,6 +9,7 @@ from std_srvs.srv import Empty, EmptyResponse
 import csv
 import cv2
 import os
+import time
 import moveit_commander
 import threading
 from cv_bridge import CvBridge
@@ -50,30 +51,35 @@ class bagLogger:
         rospy.loginfo(rospy.get_name() + ' stop recording.')
         self.terminate_ros_node("/record")
 """
+
 class DataLogger:
     def __init__(self):
         
         rospy.init_node('data_logger_node', anonymous=True)
 
         # Initialize CSV file 
+        DATE = time.strftime('%d_%m_%Y')
+        dir = os.path.join(os.path.join("data",DATE))    
+        if not os.path.exists(dir):
+            os.mkdir(dir)
         # Indentation file
-        self.csv_filename_pose = 'indentation_data.csv'
+        self.csv_filename_pose = os.path.join(dir,'indentation_data.csv')   #<--- desired csv name here
         self.csv_file_pose = open(self.csv_filename_pose, 'w')
         self.csv_writer_pose = csv.writer(self.csv_file_pose)
         #self.csv_writer_pose.writerow(['Experiment','Timestamp', 'Position_Z'])
         self.csv_writer_pose.writerow(['Experiment','Timestamp', 'Indentation'])
         # Franka ATI sensor file 
-        self.csv_filename_sensor = 'ati_sensor_franka_data.csv'
+        self.csv_filename_sensor = os.path.join(dir,'ati_sensor_franka_data.csv')
         self.csv_file_sensor = open(self.csv_filename_sensor, 'w')
         self.csv_writer_sensor = csv.writer(self.csv_file_sensor)
         self.csv_writer_sensor.writerow(['Experiment','Timestamp', 'Force_x', 'Force_y', 'Force_z', 'Torque_x', 'Torque_y', 'Torque_z']) 
         # second ATI sensor file
-        self.csv_filename_sensor_tactip = 'ati_sensor_tactip_data.csv'
+        self.csv_filename_sensor_tactip = os.path.join(dir,'ati_sensor_tactip_data.csv')
         self.csv_file_sensor_tactip = open(self.csv_filename_sensor_tactip, 'w')
         self.csv_writer_sensor_tactip = csv.writer(self.csv_file_sensor_tactip)
         self.csv_writer_sensor_tactip.writerow(['Experiment','Timestamp', 'Force_x', 'Force_y', 'Force_z', 'Torque_x', 'Torque_y', 'Torque_z']) 
         # Tactip image log file
-        self.csv_filename_frame = 'tactip_data.csv'
+        self.csv_filename_frame = os.path.join(dir,'tactip_data.csv')
         self.csv_file_frame = open(self.csv_filename_frame, 'w')
         self.csv_writer_frame = csv.writer(self.csv_file_frame)
         self.csv_writer_frame.writerow(['Experiment','Timestamp', 'Frame'])

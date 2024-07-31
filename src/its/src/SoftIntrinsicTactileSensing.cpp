@@ -10,7 +10,7 @@ SoftIntrinsicTactileSensing::~SoftIntrinsicTactileSensing(){
     /* do nothing */
 }
 
-
+/*
 bool SoftIntrinsicTactileSensing::setFingertipSurface(std::string id, double a, double b, double c){
     this->fingertip.id = id;
     this->fingertip.model.principalAxisCoeff = {a, b, c};
@@ -46,7 +46,7 @@ bool SoftIntrinsicTactileSensing::setFingertipOrientation(double roll, double pi
 
     return true;
 }
-
+*/
 bool SoftIntrinsicTactileSensing::setFingertipStiffness(double a, double b){
     if (a == 0 and b == 0){
         this->fingertip.model.stiffnessType = StiffnessType::Rigid;
@@ -65,18 +65,18 @@ bool SoftIntrinsicTactileSensing::setFingertipStiffness(double a, double b){
 
 
 // Solve contact Sensing Problem
-int SoftIntrinsicTactileSensing::solveContactSensingProblem(ContactSensingProblemSolution X0, Eigen::Vector3d f, Eigen::Vector3d m, double forceThreshold,
-                                                            ContactSensingProblemMethod method, int count_max, double stop_th, double epsilon, bool verbose){
+int SoftIntrinsicTactileSensing::solveContactSensingProblem(Eigen::Vector3d f, Eigen::Vector3d m, double forceThreshold, its::ContactSensingProblemMethod method, 
+                                                            ContactSensingProblemSolution X0,int count_max, double stop_th, double epsilon, bool verbose){
     
     switch (method)
     {
-    case ContactSensingProblemMethod::Levenberg_Marquardt:
+    case its::ContactSensingProblemMethod::Levenberg_Marquardt:
         return solveContactSensingProblemLM(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
 
-    case ContactSensingProblemMethod::Gauss_Newton:
+    case its::ContactSensingProblemMethod::Gauss_Newton:
         return solveContactSensingProblemGN(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
 
-    case ContactSensingProblemMethod::Closed_Form:
+    case its::ContactSensingProblemMethod::Closed_Form:
         return solveContactSensingProblemCF(f,m,forceThreshold);
 
     default:
@@ -141,7 +141,7 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblemLM(ContactSensingProb
     // eval g(x0)
     g(0) = 2*k*x/((a-d)*(a-d)) - fy*z + fz*y - mx;                                         // torque direction condition 
     g(1) = 2*k*y/((b-d)*(b-d)) - fz*x + fx*z - my;                                         // ...
-    g(2) = 2*k*z/((c-d)*(c-d)) - fx*y + fz*x - mz;                                         // ...
+    g(2) = 2*k*z/((c-d)*(c-d)) - fx*y + fy*x - mz;                                         // ...
     g(3) = (x*x)/((a-d)*(a-d)) + (y*y)/((b-d)*(b-d)) + (z*z)/((c-d)*(c-d)) - 1;            // point on surface 
     if(this->fingertip.model.stiffnessType == StiffnessType::Hooke){                       // surface deformation model
         g(4) = -f.transpose()*n.normalized() - E[0]*d;                    

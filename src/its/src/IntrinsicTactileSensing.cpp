@@ -47,13 +47,14 @@ bool IntrinsicTactileSensing::setFingertipOrientation(double roll, double pitch,
 }
 
 // Solve contact Sensing Problem
-int IntrinsicTactileSensing::solveContactSensingProblem(ContactSensingProblemSolution X0, Eigen::Vector3d f, Eigen::Vector3d m, double forceThreshold,
-                                                            ContactSensingProblemMethod method, int count_max, double stop_th, double epsilon, bool verbose){
+int IntrinsicTactileSensing::solveContactSensingProblem(Eigen::Vector3d f, Eigen::Vector3d m, double forceThreshold, ContactSensingProblemMethod method, 
+                                                        ContactSensingProblemSolution X0, int count_max, double stop_th, double epsilon, bool verbose){
     
     switch (method)
     {
     case ContactSensingProblemMethod::Levenberg_Marquardt:
-        return solveContactSensingProblemLM(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
+        //return solveContactSensingProblemLM(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
+        return solveContactSensingProblemOptim(X0,f,m,this->params);
 
     case ContactSensingProblemMethod::Gauss_Newton:
         return solveContactSensingProblemGN(X0,f,m,forceThreshold,count_max,stop_th,epsilon,verbose);
@@ -122,7 +123,7 @@ int IntrinsicTactileSensing::solveContactSensingProblemLM(ContactSensingProblemS
     // eval g(x0)
     g(0) = 2*k*x/(a*a) - fy*z + fz*y - mx;                                         // torque direction condition 
     g(1) = 2*k*y/(b*b) - fz*x + fx*z - my;                                         // ...
-    g(2) = 2*k*z/(c*c) - fx*y + fz*x - mz;                                         // ...
+    g(2) = 2*k*z/(c*c) - fx*y + fy*x - mz;                                         // ...
     g(3) = (x*x)/(a*a) + (y*y)/(b*b) + (z*z)/(c*c) - 1;                            // point on surface 
     
 
@@ -253,7 +254,7 @@ int IntrinsicTactileSensing::solveContactSensingProblemGN(ContactSensingProblemS
     // eval g(x0)
     g(0) = 2*k*x/(a*a) - fy*x + fz*y - mx;                                         // torque direction condition 
     g(1) = 2*k*y/(b*b) - fz*x + fx*z - my;                                         // ...
-    g(2) = 2*k*z/(c*c) - fx*y + fz*x - mz;                                         // ...
+    g(2) = 2*k*z/(c*c) - fx*y + fy*x - mz;                                         // ...
     g(3) = (x*x)/(a*a) + (y*y)/(b*b) + (z*z)/(c*c) - 1;                            // point on surface 
 
     double Xi_square = g(0)*g(0) + g(1)*g(1) + g(2)*g(2) + g(3)*g(3);              // Minimizing function cost
@@ -422,4 +423,120 @@ ExtendedContactSensingProblemSolution IntrinsicTactileSensing::getExtendedSoluti
     csps.t = (this->X.K*n).norm();                  // Torque along normal in the point of contact (PoC) [Nmm]
 
     return csps; 
+}
+
+
+/* Routines for Optimized Solver by using levmar.h */
+
+void IntrinsicTactileSensing::contact_sensing_problem(double *x, double *g, int m, int n, void *data){
+    double fx,fy,fz,mx,my,mz,a,b,c;    
+    double input[9];
+	memcpy(&input,data,9*sizeof(double));
+    fx = input[0]; fy = input[1]; fz = input[2]; 
+    mx = input[3]; my = input[4]; mz = input[5];
+    a = input[6]; b = input[7]; c = input[8]; 
+    
+    // x = [cx, cy, cz, k]
+    // g(x) = 0
+    g[0] = 2*x[3]*x[0]/(a*a) - fy*x[2] + fz*x[1] - mx;                                         // torque direction condition 
+    g[1] = 2*x[3]*x[1]/(b*b) - fz*x[0] + fx*x[2] - my;                                         // ...
+    g[2] = 2*x[3]*x[2]/(c*c) - fx*x[1] + fy*x[0] - mz;                                         // ...
+    g[3] = (x[0]*x[0])/(a*a) + (x[1]*x[1])/(b*b) + (x[2]*x[2])/(c*c) - 1;                   // point on surface 
+}
+void IntrinsicTactileSensing::jacobian_contact_sensing_problem(double *x, double *jac, int m, int n, void *data){
+    double fx,fy,fz,mx,my,mz,a,b,c;    
+    double input[9];
+	memcpy(&input,data,9*sizeof(double));
+    fx = input[0]; fy = input[1]; fz = input[2]; 
+    mx = input[3]; my = input[4]; mz = input[5];
+    a = input[6]; b = input[7]; c = input[8]; 
+    
+    // Eval J = dg/dx(x)
+    // dg1/dx
+    jac[0] = 2*x[3]/(a*a);                                       
+    jac[1] = fz;                                       
+    jac[2] = -fy;                                       
+    jac[3] = 2*x[0]/(a*a);         
+    // dg2/dx
+    jac[4] = -fz;                                       
+    jac[5] = 2*x[3]/(b*b);                                       
+    jac[6] = fx;                                       
+    jac[7] = 2*x[1]/(b*b);         
+    // dg3/dx
+    jac[8] = fy;                                       
+    jac[9] = -fx;                                       
+    jac[10] = 2*x[3]/(c*c);                                       
+    jac[11] = 2*x[2]/(c*c);          
+    // dg4/dx
+    jac[12] = 2*x[0]/(a*a);                                       
+    jac[13] = 2*x[1]/(b*b);                                       
+    jac[14] = 2*x[2]/(c*c);                                       
+    jac[15] = 0; 
+}
+
+int IntrinsicTactileSensing::solveContactSensingProblemOptim(ContactSensingProblemSolution X0 ,Eigen::Vector3d f, Eigen::Vector3d m, OptimLM params){
+    // store measure
+    this->f = f;                // [N]
+    this->m = m;                // [Nm]
+    
+    // check threshold condition
+    if(f.norm()< params.force_threshold){
+        return -1;
+    }
+    // Fingertip model
+    const double a = this->fingertip.model.principalAxisCoeff[0];      // Ellipsoid Principal Axis Coefficients [mm]
+    const double b = this->fingertip.model.principalAxisCoeff[1];
+    const double c = this->fingertip.model.principalAxisCoeff[2];
+
+    const Eigen::Vector3d d_sb =  this->fingertip.displacement;
+    const Eigen::Matrix3d R_sb =  this->fingertip.orientation;
+
+    // F/T Sensor measures
+    Eigen::Vector3d tmp = R_sb*f;       // Force Measure [N] w.r.t Fingertip Frame, {B}
+    const double px = tmp(0);      
+    const double py = tmp(1);
+    const double pz = tmp(2);
+    const Eigen::Vector3d p =  {px, py, pz};
+    
+    tmp = R_sb*(m + f.cross(d_sb/1000.0));     // Torque Measure [Nm] w.r.t Fingertip Frame, {B}
+    const double tx = tmp(0)*1000.0;           // convering in [Nmm]
+    const double ty = tmp(1)*1000.0;
+    const double tz = tmp(2)*1000.0;
+    const Eigen::Vector3d t =  {tx, ty, tz};
+
+    // Set variable for LM solver 
+    double x[4] = {X0.c(0),X0.c(1),X0.c(2),X0.K};                   // initial guess x0
+    double data[9] = {p(0),p(1),p(2), t(0),t(1),t(2), a, b, c};     // measures and params
+  
+	int step = dlevmar_der(this->contact_sensing_problem, this->jacobian_contact_sensing_problem, x, NULL, params.m, params.n, params.itmax, params.opt, params.info, NULL, NULL, data);
+    //int step = dlevmar_dif(this->contact_sensing_problem, x, NULL, params.m, params.n, params.itmax, params.opt, params.info, NULL, NULL, data);
+
+
+    this->X.c(0) = x[0]; this->X.c(1) = x[1]; this->X.c(2) = x[2]; this->X.K = x[3];
+
+    if (params.verbose){
+        std::cout << "Reason of termination:\t" << params.info[6] << std::endl;
+        std::cout << "Num of Step:\t" << params.info[5] << std::endl;
+        std::cout << "Error ||e||_2 at initial guess ("<< X0.c(0) << ", " << X0.c(1) << ", " << X0.c(2) << ", " << X0.K << "):\t" << params.info[0] << std::endl;
+        std::cout << "Error ||e||_2 at solution:\t" << params.info[1] << std::endl;
+        std::cout << "Last value of ||J^T g ||_inf:\t" << params.info[2] << std::endl;
+        std::cout << "Last step ||delta_x||_2:\t" << params.info[3] << std::endl;
+        std::cout << "lambda at solution:\t" << params.info[4] << std::endl;
+    }    
+    return step; 
+
+}
+
+
+void IntrinsicTactileSensing::setLMParameters(double forceThreshold, int count_max, double stop_th, double epsilon, bool verbose){
+
+    this->params.force_threshold = forceThreshold;
+    this->params.itmax = count_max;
+    this->params.m = 4; this->params.n = 4;
+    this->params.verbose = verbose;
+
+    this->params.opt[0] =  1e2;                                // mu init (lambda = mu*max{J^T J} )
+    this->params.opt[1] = 1e-15;                                // stop threshold on ||J^T e||_inf 
+    this->params.opt[2] = 1e-15;                                // stop threshold on ||Dp||_2
+    this->params.opt[3] = stop_th;                              // stop threshold on ||e||_2
 }

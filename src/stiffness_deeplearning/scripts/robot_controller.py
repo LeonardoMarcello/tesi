@@ -33,9 +33,17 @@ from geometry_msgs.msg import Pose, PoseStamped, PointStamped, PoseArray
 import yaml
 from std_srvs.srv import Empty #service
 
-TABLE_HEIGHT = 0.0775  
+TABLE_HEIGHT = 0.0775       # altezza posizione B   [m]
+SKIN_HEIGHT = 0.0055        # altezza superficie fingertip [m] 
+INDENTATION = 0.002         # indentazione [m]
+
+# Valori per altezza superficie
 # 0.077 -- 0 deg su livella; 0.087 -- 15 deg su livella; 0.077 -- 30 deg su tappo custodia TacTip
 # 0.016 -- Grasso sottile; 0.021 -- Arteria; 0.022 -- Grasso spesso; 0.017 -- Vena
+
+# Con ellissoide SKIN HEIGTH dovrebbe essere [m]
+#      |   0 degrees    |    15 degrees     |    30 degrees
+#      |    0.00474     |      0.00489      |     0.00541
 
 try:
     from math import pi, tau, dist, fabs, cos
@@ -94,7 +102,8 @@ class RobotController(object):
         self.stop_save_data = rospy.ServiceProxy('stop_save_data', Empty)  
         self.start_indent = rospy.ServiceProxy('start_indent', Empty)                       # Soft Contact Sensing        
         self.save_data_its = rospy.ServiceProxy('soft_csp/save_data', Empty)
-        self.stop_save_data_its = rospy.ServiceProxy('soft_csp/stop_save_data', Empty)   
+        self.stop_save_data_its = rospy.ServiceProxy('soft_csp/stop_save_data', Empty)  
+        self.set_b = rospy.ServiceProxy('soft_csp/set_b', Empty)    
 
         #self.ft_client = rospy.ServiceProxy('/ft_sensor/bias_cmd', String_cmd)
         self.ft_client_franka = rospy.ServiceProxy('/ft_sensor_franka/bias_cmd', String_cmd)
@@ -110,8 +119,8 @@ class RobotController(object):
         self.error_recovery.wait_for_server()
         
         self.srv = Server(demo_tactip_cfgConfig, self.dyn_rec_callback)
-        INDENTATION = 0.004
-        self.table_height = TABLE_HEIGHT - INDENTATION                                  # <--- Indentation in m, (ori.  0.010)
+        #self.table_height = TABLE_HEIGHT - INDENTATION                                 
+        self.table_height = TABLE_HEIGHT + SKIN_HEIGHT - INDENTATION    
         rospy.set_param('/indentation', INDENTATION*1000.0) 
 
         self.experiment = 0
@@ -190,6 +199,8 @@ class RobotController(object):
 	    
 
 def main():
+    global TABLE_HEIGHT,SKIN_HEIGHT,INDENTATION
+
     rospy.init_node("robot_controller", anonymous=True)
     robot_controller_node = RobotController()
 
@@ -225,7 +236,11 @@ def main():
 #    robot_controller_node.move_group_robot.set_path_constraints(goal_c)
 
     while True:
-        choice = input("============ Press `Enter` to move the robot or q to quite ...")
+        choice = input("============ Press `Enter` to move the robot\n"
+                       "             B to reach fingertip frame {B} origin\n" 
+                       "             r to reset experiment counter\n"
+                       "             s to set experiment heights\n"
+                       "             q to quite...")
         if choice == "":
             goal = ErrorRecoveryActionGoal()
             goal.header = std_msgs.msg.Header()
@@ -239,7 +254,7 @@ def main():
             target = PoseStamped()
             target.pose.position.x = 0
             target.pose.position.y = 0
-            target.pose.position.z = TABLE_HEIGHT
+            target.pose.position.z = TABLE_HEIGHT + SKIN_HEIGHT
             quat = R.from_matrix(np.identity(3)).as_euler("xyz", degrees=True)
             quat = R.from_euler('xyz', [quat[0]+180, quat[1], quat[2]], degrees=True).as_quat()
             target.pose.orientation.x = quat[0]
@@ -264,11 +279,11 @@ def main():
             #resp = robot_controller_node.save_data()             # <----- Start log Measurement
             # ##roslaunch its tactip.launch#########################
             #funzione che esegue il task princiaple            
-            print("going to grasp with height ", robot_controller_node.table_height)
+            print("going to grasp with height ", TABLE_HEIGHT + SKIN_HEIGHT - INDENTATION)
             table = PoseStamped()
             table.pose.position.x = 0
             table.pose.position.y = 0
-            table.pose.position.z = robot_controller_node.table_height
+            table.pose.position.z = TABLE_HEIGHT + SKIN_HEIGHT - INDENTATION
             quat = R.from_matrix(np.identity(3)).as_euler("xyz", degrees=True)
             quat = R.from_euler('xyz', [quat[0]+180, quat[1], quat[2]], degrees=True).as_quat()
             table.pose.orientation.x = quat[0]
@@ -294,6 +309,8 @@ def main():
                 resp = robot_controller_node.stop_save_data_its()         # <----- End log ITS solution
                 resp = robot_controller_node.stop_save_data()             # <----- End log Measurement
                 rospy.sleep(3)                                            #             | sleep in seconds
+            if choice == 'q':
+                robot_controller_node.experiment -= 1
                 
             #################################
             ## IO (PAOLO) HO AGGIUNTO LA RIGA DI CODICE SOTTO
@@ -303,7 +320,7 @@ def main():
             target = PoseStamped()
             target.pose.position.x = 0
             target.pose.position.y = 0
-            target.pose.position.z = TABLE_HEIGHT
+            target.pose.position.z = TABLE_HEIGHT + SKIN_HEIGHT
             quat = R.from_matrix(np.identity(3)).as_euler("xyz", degrees=True)
             quat = R.from_euler('xyz', [quat[0]+180, quat[1], quat[2]], degrees=True).as_quat()
             target.pose.orientation.x = quat[0]
@@ -324,7 +341,51 @@ def main():
 
             #robot_controller_node.move_group_robot.stop()
             #robot_controller_node.move_group_robot.clear_pose_targets()
-        elif choice == "q":
+        elif choice == "B":
+            goal = ErrorRecoveryActionGoal()
+            goal.header = std_msgs.msg.Header()
+
+            
+            robot_controller_node.error_recovery.send_goal(goal)
+            wait = robot_controller_node.error_recovery.wait_for_result(rospy.Duration(5.0))
+            print("going to Fingertip origin")
+            target = PoseStamped()
+            target.pose.position.x = 0
+            target.pose.position.y = 0
+            target.pose.position.z = TABLE_HEIGHT
+            quat = R.from_matrix(np.identity(3)).as_euler("xyz", degrees=True)
+            quat = R.from_euler('xyz', [quat[0]+180, quat[1], quat[2]], degrees=True).as_quat()
+            target.pose.orientation.x = quat[0]
+            target.pose.orientation.y = quat[1]
+            target.pose.orientation.z = quat[2]
+            target.pose.orientation.w = quat[3]
+            header = std_msgs.msg.Header()
+            header.stamp = rospy.Time(0)
+            header.frame_id = 'table_link'
+            target.header = header
+            robot_controller_node.go_to_pose(target)[0:1]
+            rospy.sleep(1) 
+
+            resp = robot_controller_node.set_b()                  # <----- Start setting B pos
+        
+        elif choice == "r" or choice=="R":
+            robot_controller_node.experiment = 0
+            print(f"Experiment number resetted to {robot_controller_node.experiment}")
+
+        elif choice == "s" or choice=="S":
+            cmd = input(f"Insert new TABLE_HEIGHT (old value: {TABLE_HEIGHT})...")
+            if not cmd=='': TABLE_HEIGHT = float(cmd)
+            cmd = input(f"Insert new SKIN_HEIGHT (old value: {SKIN_HEIGHT})...")
+            if not cmd=='': SKIN_HEIGHT = float(cmd)
+            cmd = input(f"Insert new INDENTATION (old value: {INDENTATION})...")
+            if not cmd=='': INDENTATION = float(cmd)
+            
+            robot_controller_node.table_height = TABLE_HEIGHT + SKIN_HEIGHT - INDENTATION    
+            rospy.set_param('/indentation', INDENTATION*1000.0) 
+            
+            print(f"New position setted")
+
+        elif choice == "q" or choice == "Q":
             print("returning to ready")
             robot_controller_node.move_group_robot.set_named_target('ready')
             executed = robot_controller_node.move_group_robot.go(wait=True)

@@ -1,4 +1,5 @@
 #include "ros/ros.h"
+#include <tf/transform_broadcaster.h>
 #include "geometry_msgs/WrenchStamped.h"
 #include "its_msgs/SoftContactSensingProblemSolution.h"
 #include "its/IntrinsicTactileSensing.hpp"
@@ -67,8 +68,11 @@ int main(int argc, char **argv){
   int count_max;
   double force_th, eps, stop_th;
   bool verbose;
-  ContactSensingProblemMethod solver;
+  its::ContactSensingProblemMethod solver;
 
+  // Transform object and transform broadcaster
+  static tf::TransformBroadcaster br;
+  tf::Transform transform;
 
   // Declaring parameters
   nh.param<std::string>("sensor/id",sensor_id, "mySensor");
@@ -108,15 +112,15 @@ int main(int argc, char **argv){
   const std::string green("\033[1;32m");
   const std::string reset("\033[0m");
   if (solver_name=="Levenberg-Marquardt"){
-    solver = ContactSensingProblemMethod::Levenberg_Marquardt;
+    solver = its::ContactSensingProblemMethod::Levenberg_Marquardt;
   }else if(solver_name=="Gauss-Newton"){
-    solver = ContactSensingProblemMethod::Gauss_Newton;
+    solver = its::ContactSensingProblemMethod::Gauss_Newton;
   }else if(solver_name=="Closed-Form"){
-    solver = ContactSensingProblemMethod::Closed_Form;
+    solver = its::ContactSensingProblemMethod::Closed_Form;
   }else{
     ROS_WARN("Desired solver does not exist. Levenberg_Marquardt method will be used");
     solver_name = "Lavenberg-Marquardt";
-    solver = ContactSensingProblemMethod::Levenberg_Marquardt;
+    solver = its::ContactSensingProblemMethod::Levenberg_Marquardt;
   }
 	std::cout<<green<<"Solver: "<<solver_name<<reset<<std::endl;
   
@@ -137,11 +141,11 @@ int main(int argc, char **argv){
     if (new_measure){
         // solve ContactSensingProblem
         ros::Time start_time(ros::Time::now());
-        if (solver == ContactSensingProblemMethod::Gauss_Newton || solver == ContactSensingProblemMethod::Levenberg_Marquardt){
-          ITS.solveContactSensingProblemCF(f, m, force_th);
+        if (solver == its::ContactSensingProblemMethod::Gauss_Newton || solver == its::ContactSensingProblemMethod::Levenberg_Marquardt){
+          ITS.solveContactSensingProblem(f, m, force_th, its::ContactSensingProblemMethod::Closed_Form);
           X0.c = ITS.X.c; X0.K = ITS.X.K;
         }
-        int step = SITS.solveContactSensingProblem(X0, f, m, force_th, solver, count_max, stop_th, eps, verbose);
+        int step = SITS.solveContactSensingProblem(f, m, force_th, solver, X0, count_max, stop_th, eps, verbose);
         ros::Time stop_time(ros::Time::now());
         new_measure = false;
 
@@ -156,10 +160,10 @@ int main(int argc, char **argv){
                       solution.PoC(0), solution.PoC(1), solution.PoC(2),
                       solution.fn, solution.t, solution.Dd);
           if(step < count_max){
-            ROS_INFO("SITS algorithm runs for %i step. Elapsed time = %f ms", step, (stop_time.nsec - start_time.nsec)/1e6);
+            ROS_INFO("SITS algorithm runs for %i step. Elapsed time = %f ms", step,  (stop_time - start_time).sec*1e3 + static_cast< float >((stop_time - start_time).nsec)/1e6);
           }
           else{
-            ROS_WARN("SITS algorithm needs more than %i step. Elapsed time = %f ms", count_max, (stop_time.nsec - start_time.nsec)/1e6);
+            ROS_WARN("SITS algorithm needs more than %i step. Elapsed time = %f ms", count_max, (stop_time - start_time).sec*1e3 + static_cast< float >((stop_time - start_time).nsec)/1e6);
           }
           ROS_INFO("%s",std::string(40, '-').c_str());
 
@@ -174,9 +178,16 @@ int main(int argc, char **argv){
           sol_msg.Ft.x = solution.ft(0); sol_msg.Ft.y = solution.ft(1); sol_msg.Ft.z = solution.ft(2);
           sol_msg.T = solution.t;
           sol_msg.D = solution.Dd;
-          sol_msg.convergence_time = (stop_time.nsec - start_time.nsec)/1e6;
+          sol_msg.convergence_time = (stop_time - start_time).sec*1e3 + static_cast< float >((stop_time - start_time).nsec)/1e6;
 
           solution_pub.publish(sol_msg);
+          
+          // broadcast tf
+          transform.setOrigin( tf::Vector3(solution.PoC(0)/1000.0, solution.PoC(1)/1000.0, solution.PoC(2)/1000.0) );
+          tf::Quaternion q;
+          q.setRPY(0, 0, 0);
+          transform.setRotation(q);
+          br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), SITS.fingertip.id, "PoC"));
         }
         else{
           

@@ -37,8 +37,8 @@ def main():
     print("bag created")
 
     # write forces topics
-    forces = ["ati_sensor_tactip_data.csv", "ati_sensor_franka_data.csv"]
-    topics = ["/ft_sensor_tactip/netft_data", "/ft_sensor_franka/netft_data"]
+    forces = ["ati_sensor_tactip_data.csv"]#, "ati_sensor_franka_data.csv"]
+    topics = ["/ft_sensor_tactip/netft_data"]#, "/ft_sensor_franka/netft_data"]
     for idx,filename in enumerate(forces):
         csv_file,csv_reader = open_csv(filename)
         go = True
@@ -58,14 +58,15 @@ def main():
 
                 bag.write(topic = topics[idx], msg=force, t=stamp)
             
-            except:
+            except Exception as e:
+                print(e)
                 csv_file.close()
                 idx += 1
                 go = False
 
     # write images topics
-    images = ["tactip_data.csv"]
-    topics = ["/usb_cam/image_raw"]
+    images = []#["tactip_data.csv"]
+    topics = []#["/usb_cam/image_raw"]
     bridge = CvBridge()
     for idx,filename in enumerate(images):
         csv_file,csv_reader = open_csv(filename)
@@ -86,7 +87,32 @@ def main():
 
                 bag.write(topic = topics[idx], msg=image_msg, t=stamp)
             
-            except:
+            except Exception as e:
+                print(e)
+                csv_file.close()
+                idx += 1
+                go = False
+
+
+    # write indentation topics
+    indent = ["indentation_data.csv"]#["tactip_data.csv"]
+    topics = ["/indent"]#["/usb_cam/image_raw"]
+    for idx,filename in enumerate(indent):
+        csv_file,csv_reader = open_csv(filename)
+        go = True
+        while go:
+            try:
+                row = next(csv_reader)	
+
+                pose = PoseStamped()
+                stamp = rospy.Time(np.double(row[1])/1e9)
+                force.header.stamp = stamp
+                pose.pose.position.z =  float(row[2])
+
+                bag.write(topic = topics[idx], msg=pose, t=stamp)
+            
+            except Exception as e:
+                print(e)
                 csv_file.close()
                 idx += 1
                 go = False

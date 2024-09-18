@@ -100,7 +100,7 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblemLM(ContactSensingProb
     double x, y, z, k, d;            // Store solution into more readable variables
     x = this->X.c(0);                // PoC x [mm]
     y = this->X.c(1);                // PoC y [mm]
-    z = this->X.c(2);                // PoC z[mm]
+    z = this->X.c(2);                // PoC z [mm]
     k = this->X.K;                   // Scale Factor
     d = this->X.Dd;                  // Deformation [mm]
     
@@ -126,6 +126,11 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblemLM(ContactSensingProb
     const double mx = tmp(0)*1000.0;           // converting in [Nmm]
     const double my = tmp(1)*1000.0;
     const double mz = tmp(2)*1000.0;
+
+    // store measure
+    this->f = {fx,fy,fz};                // [N]
+    this->m = {mx,my,mz};                // [Nm]
+    
     // LM Algorithm params
     double lambda = 100;                // init damping parameter 
 
@@ -321,7 +326,11 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblemGN(ContactSensingProb
     tmp = R_sb*(m + f.cross(d_sb/1000.0));     // Torque Measure [Nm] w.r.t Fingertip Frame, {B}
     const double mx = tmp(0)*1000.0;           // converting in [Nmm]
     const double my = tmp(1)*1000.0;
-    const double mz = tmp(2)*1000.0;
+    const double mz = tmp(2)*1000.0;   
+    
+    // store measure
+    this->f = {fx,fy,fz};                // [N]
+    this->m = {mx,my,mz};                // [Nm]
 
     // Contact Problem Sensing definition
     Eigen::VectorXd g(5);                                       // contact problem function. g(x) = 0
@@ -467,20 +476,24 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblemCF(Eigen::Vector3d f,
     const Eigen::Vector3d p =  {px, py, pz};
     
     tmp = R_sb*(m + f.cross(d_sb/1000.0));     // Torque Measure [Nm] w.r.t Fingertip Frame, {B}
-    const double tx = tmp(0)*1000.0;           // convering in [Nmm]
+    const double tx = tmp(0)*1000.0;           // converting in [Nmm]
     const double ty = tmp(1)*1000.0;
     const double tz = tmp(2)*1000.0;
     const Eigen::Vector3d t =  {tx, ty, tz};
 
+    // Store measure 
+    this->f = p;    // Force [N]
+    this->m = t;    // Torque [Nm]
+
 	switch(this->fingertip.model.stiffnessType){
 		case StiffnessType::Hooke:
-			psa(0) = a - (fabs(px)/E[0]);
-			psa(1) = b - (fabs(py)/E[0]);
+			psa(0) = a - (fabs(pz)/E[0]);
+			psa(1) = b - (fabs(pz)/E[0]);
 			psa(2) = c - (fabs(pz)/E[0]);
 			break;
 		case StiffnessType::Quadratic:
-            psa(0) = a - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(px)))/(2*E[1]);
-            psa(1) = b - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(py)))/(2*E[1]);
+            psa(0) = a - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(pz)))/(2*E[1]);
+            psa(1) = b - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(pz)))/(2*E[1]);
             psa(2) = c - (-E[0] + sqrt(pow(E[0],2) + 4*E[1]*fabs(pz)))/(2*E[1]);
 			break;
 		case StiffnessType::Rigid:
@@ -562,7 +575,7 @@ ExtendedContactSensingProblemSolution SoftIntrinsicTactileSensing::getExtendedSo
 void SoftIntrinsicTactileSensing::soft_contact_sensing_problem(double *x, double *g, int m, int n, void *data){
     double fx,fy,fz,mx,my,mz, a,b,c, e1,e2;    
     double input[11];
-	memcpy(&input,data,11*sizeof(double));
+	memcpy(&input, data, 11*sizeof(double));
     fx = input[0]; fy = input[1]; fz = input[2]; 
     mx = input[3]; my = input[4]; mz = input[5];
     a = input[6]; b = input[7]; c = input[8]; 
@@ -581,7 +594,7 @@ void SoftIntrinsicTactileSensing::soft_contact_sensing_problem(double *x, double
 void SoftIntrinsicTactileSensing::jacobian_soft_contact_sensing_problem(double *x, double *jac, int m, int n, void *data){
     double fx,fy,fz,mx,my,mz, a,b,c, e1,e2;    
     double input[11];
-	memcpy(&input,data,11*sizeof(double));
+	memcpy(&input, data, 11*sizeof(double));
     fx = input[0]; fy = input[1]; fz = input[2]; 
     mx = input[3]; my = input[4]; mz = input[5];
     a = input[6]; b = input[7]; c = input[8]; 
@@ -652,6 +665,10 @@ int SoftIntrinsicTactileSensing::solveContactSensingProblemOptim(ContactSensingP
     const double ty = tmp(1)*1000.0;
     const double tz = tmp(2)*1000.0;
     const Eigen::Vector3d t =  {tx, ty, tz};
+
+    // Store measure 
+    this->f = p;    // Force [N]
+    this->m = t;    // Torque [Nm]
 
     // Set variable for LM solver 
     double x[4] = {X0.c(0),X0.c(1),X0.c(2),X0.K};                   // initial guess x0

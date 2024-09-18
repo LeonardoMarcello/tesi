@@ -4,6 +4,7 @@
 # ===========================================================
 tactip:
     camera:                             # TacTip camera intrinsic parameter
+        depth: 22                       # distance camera lens to tip [mm]
         fx: 3.2337923992049144e+02      # - x focal lenght
         fy: 3.4230028878526491e+02      # - y focal lenght
         cx: 3.1042034270984652e+02      # - x camera center
@@ -59,7 +60,7 @@ markers_density:            # Params for Gaussian Kernel Algorithm
                             
     threshold: 0.01         # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
     
-    fit:                    # Fit parameters for deformation estimate
+    fit:                    # Fit parameters for deformation estimation
         type: "power"       # type of curve (i.e linear, quadratic, power, logarithmic)   
         a: 0.8776 
         b: 0.6165 

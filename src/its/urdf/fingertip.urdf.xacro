@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="fingertip">
 
   <!-- Fingertip -->
-  <link name="TacTip"/>
+  <link name="DigiTac"/>
   <joint name="fingertip_to_brush" type="fixed">
       <parent link="panda_link8"/>
       <child link="TacTip"/>

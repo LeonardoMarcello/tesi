@@ -9,12 +9,12 @@ import numpy as np
 import tifffile
 
 
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib import cm
+#import matplotlib
+#import matplotlib.pyplot as plt
+#from matplotlib import cm
 
-matplotlib.use("Qt5agg")
-matplotlib.interactive(True)
+#matplotlib.use("Qt5agg")
+#matplotlib.interactive(True)
 
 class ITSTacTipViz:
     def __init__(self):
@@ -22,7 +22,7 @@ class ITSTacTipViz:
         rospy.init_node('its_tactip_viz', anonymous=True)
         
         # node rate
-        self.rate = rospy.Rate(10) # 10hz
+        self.rate = rospy.Rate(24) # 10hz
 
         # Estimated markers density param
         self.density = None             # density array d[u,v]
@@ -137,8 +137,11 @@ class ITSTacTipViz:
 
     ##################
     # UTILs
-    ##################
-
+    ##################    
+    def setWindow(self):
+        cv2.namedWindow('Gaussian density heatmap')
+        cv2.waitKey(1)
+        """
     def setPlot(self):
         # 3D Plot
         #self.figure, self.axis = plt.subplots(subplot_kw={"projection": "3d"})
@@ -153,10 +156,9 @@ class ITSTacTipViz:
         return
 
     def plotDensity(self, density, shape = (640,480), resolution=1):
-        """
+
         plotDensity: 
             Plot into a 3D graph the densities.
-        """
         # Grid UV
         u_pxl = np.arange(0, shape[0], resolution)          # XY-pixels
         v_pxl = np.arange(0, shape[1], resolution)
@@ -194,25 +196,32 @@ class ITSTacTipViz:
         plt.ion()
         #plt.pause(0.02)
 
+        """
 
     def run(self):
         print("Hi from TacTip viz") 
-        self.setPlot()  
+        #self.setPlot()  
+        self.setWindow()
         while not rospy.is_shutdown():
-            if (self.plot):
-                self.plotDensity(self.delta_density.copy(), (self.image.shape[1],self.image.shape[0]), self.resolution)
-                #self.plotDensity(self.density.copy(), (self.image.shape[1],self.image.shape[0]), self.resolution)
-                self.plot = False
+            #if (self.plot):
+            #    self.plotDensity(self.delta_density.copy(), (self.image.shape[1],self.image.shape[0]), self.resolution)
+            #    #self.plotDensity(self.density.copy(), (self.image.shape[1],self.image.shape[0]), self.resolution)
+            #    self.plot = False
 
-            #if (self.video):
-            #    cv2.imshow('Image', self.img_mod) 
-            #    cv2.waitKey(1) 
-            #    self.video = False
+            
+            if self.delta_density is not None:
+                # remap into 0-255 
+                img = np.uint8(255/np.max(self.density.T)*(self.density.T))
+                # apply colormap
+                img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+                # show
+                cv2.imshow('Gaussian density heatmap', img) 
+                cv2.waitKey(1) 
 
             self.rate.sleep()
 
     def __del__(self):
-        cv2.destroyAllWindows() 
+        cv2.destroyAllWindows('Gaussian density heatmap') 
         return
 
 if __name__ == '__main__':

@@ -10,10 +10,11 @@ using namespace soft_its;
 
 
 // Soft Intrinsic Tactile Sensing variables
-its::IntrinsicTactileSensing ITS;                   // ITS Object for rigid fingartip to use as initialization
+its::IntrinsicTactileSensing ITS;                   // ITS Object for rigid fingertip to use as initial guess
 SoftIntrinsicTactileSensing SITS;                   // SITS Object
 ContactSensingProblemSolution X0;                   // Initial Guess
 ExtendedContactSensingProblemSolution solution;     // Extended CSP Solution
+std::vector<double> psa_at_rest(3);                 // principal axis with no contact
 
 // Measures variables
 bool new_measure = false;               // New measure available
@@ -33,6 +34,7 @@ void ftCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg){
 
 // Initial Guess callback
 void igCallback(const its_msgs::SoftContactSensingProblemSolution::ConstPtr& msg){
+  // Method A: get Initial Guess directly from TacTip 
   // Point Of Contact
   X0.c(0) = msg->PoC.x; X0.c(1) = msg->PoC.y; X0.c(2) = msg->PoC.z;
   // Normal Deformation
@@ -41,7 +43,15 @@ void igCallback(const its_msgs::SoftContactSensingProblemSolution::ConstPtr& msg
   double norm = SITS.fingertip.model.getNormal(X0.c(0), X0.c(1), X0.c(2), X0.Dd).norm();
   X0.K = msg->T/norm;
 
-  ROS_INFO("New Initial Guess setted");
+  //ROS_INFO("New Initial Guess setted");
+
+  /* Method B: get Initial Guess with Closed Form on TacTip based shrunk surface 
+  // Set shrunk ellipsoid
+  std::string finger_id = ITS.fingertip.id;
+  double Dd = msg->D;
+  ITS.setFingertipSurface(finger_id, psa_at_rest[0]-Dd, psa_at_rest[1]-Dd, psa_at_rest[2]-Dd); 
+
+  //ROS_INFO("New Initial Guess setted");*/
 }
 
 
@@ -89,7 +99,8 @@ int main(int argc, char **argv){
   nh.param<double>("fingertip/principalSemiAxis/b",psa[1], 1);
   nh.param<double>("fingertip/principalSemiAxis/c",psa[2], 1);  
   nh.param<double>("fingertip/stiffnessType/a",stiff_coeff[0], 0);
-  nh.param<double>("fingertip/stiffnessType/b",stiff_coeff[1], 0);  
+  nh.param<double>("fingertip/stiffnessType/b",stiff_coeff[1], 0); 
+  psa_at_rest[0]=psa[0]; psa_at_rest[1]=psa[1]; psa_at_rest[2]=psa[2]; 
   SITS.setFingertipSurface(finger_id,psa[0],psa[1],psa[2]);
   SITS.setFingertipDisplacement(dispX,dispY,dispZ);
   SITS.setFingertipOrientation(roll,pitch,yaw);
@@ -137,14 +148,14 @@ int main(int argc, char **argv){
 
 
 
-  while (ros::ok()) {
-    
+  while (ros::ok()) {    
     if (new_measure){
         // solve ContactSensingProblem
         ros::Time start_time(ros::Time::now());
         if (solver == its::ContactSensingProblemMethod::Gauss_Newton || solver == its::ContactSensingProblemMethod::Levenberg_Marquardt){
-          ITS.solveContactSensingProblem(f, m, force_th, its::ContactSensingProblemMethod::Closed_Form);
-          X0.c = ITS.X.c; X0.K = ITS.X.K;
+          // Get initial guess from Closed form apllied on rigid surface
+          //ITS.solveContactSensingProblem(f, m, force_th, its::ContactSensingProblemMethod::Closed_Form);
+          //X0.c = ITS.X.c; X0.K = ITS.X.K;
         }
         int step = SITS.solveContactSensingProblem(f, m, force_th, solver, X0, count_max, stop_th, eps, verbose);
         ros::Time stop_time(ros::Time::now());

@@ -239,7 +239,7 @@ class TacTipGaussianKernel:
         """
         # Volume variation
         if type=="linear":             
-            deformation = params[0]*integral + params[1]*integral*integral
+            deformation = params[0] + params[1]*integral
         elif type=="quadratic":             
             deformation = params[0]*integral + params[1]*integral*integral
         elif type=="power":             
@@ -250,7 +250,7 @@ class TacTipGaussianKernel:
             deformation = params[0]*integral + params[1]*integral*integral
         return deformation
     
-    def camera2body(self,PoC_C):
+    def camera2body(self,PoC_C,deformation):
         """
         camera2body: 
             Coverts Centroid of Contact position (u,v) in Camera frame {C} into 3D 
@@ -263,13 +263,15 @@ class TacTipGaussianKernel:
         v0 = self.cy
         fx = self.fx
         fy = self.fy
-        z = self.depth
+        z = self.depth - deformation
 
         x = (u-u0)/fx*z
         y = (v-v0)/fy*z
 
-        PoC_B = (y,-x,z-18)              # <----- per z differenza piani -18 circa
-                                        #        x,z invertiti perche immagine specchiata?
+        PoC_B = (-y, x, z - self.depth + 20)    # <----- per z differenza piani -18 circa
+                                                #        x,z invertiti perche immagine specchiata?
+                                                #       o perchè tactip messo ruotato
+        PoC_B = (-y, -x, z - self.depth + 4.737) 
 
         return PoC_B
 
@@ -297,23 +299,24 @@ class TacTipGaussianKernel:
                 # 4) Point of Contact
                 #if len(R_contours) > 0:
                 if np.any(R_mask) > 0:
-                    # estimate PoC
-                    self.PoC = self.pointOfContact(self.density,self.density_at_rest, self.rshape,self.resolution)
-                    PoC_B = self.camera2body(self.PoC)
                     # estimate deformation
                     integral = self.density_integration(self.density, self.density_at_rest, R_mask, self.resolution)
                     self.deformation = self.density2deformation(integral, self.fit_params,self.fit_type)
 
+                    # estimate PoC
+                    self.PoC = self.pointOfContact(self.density,self.density_at_rest, self.rshape,self.resolution)
+                    PoC_B = self.camera2body(self.PoC, self.deformation)
+                    
                     # broadcast initial guess
                     rospy.loginfo("Contact detected at Pixels (u, v, def) = (%i, %i, %.2f) -> (x, y, z) = (%.2f, %.2f, %.2f)",
                                   self.PoC[0],self.PoC[1], self.deformation,
-                                  PoC_B[0], PoC_B[1], PoC_B[2]-self.deformation)
+                                  PoC_B[0], PoC_B[1], PoC_B[2])
                     
                     its_msg = SoftContactSensingProblemSolution()
                     its_msg.header.stamp = rospy.Time.now()
                     its_msg.PoC.x = float(PoC_B[0])
                     its_msg.PoC.y = float(PoC_B[1])
-                    its_msg.PoC.z = float(PoC_B[2]-self.deformation)
+                    its_msg.PoC.z = float(PoC_B[2])
                     its_msg.D = float(self.deformation)
                     self.initial_guess_publisher.publish(its_msg)
                     

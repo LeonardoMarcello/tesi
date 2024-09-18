@@ -1,85 +1,74 @@
-# Parameters for TacTip Contact detection
-
+# Parameters for TacTip Contact detection on TacTip
+# ===========================================================
+# - Tactip camera description
+# ===========================================================
 tactip:
-    camera:                             # TacTip camera intrinsic parameter
-        # ##################
-        # - DigiTac v1.5
-        # ##################
-        fx: 3.2337923992049144e+02      # - x focal lenght
-        fy: 3.4230028878526491e+02      # - y focal lenght
+    camera:                             # TacTip camera intrinsic parameter        
+        depth: 48                       # distance camera lens to tip [mm]
+        fx: 5.5232396906481722e+02      # - x focal lenght
+        fy: 5.5575248970574751e+02      # - y focal lenght
         cx: 3.1042034270984652e+02      # - x camera center
         cy: 2.4710324279132291e+02      # - y camera center
-        distortion_coeff: [             # - distortion
-            2.6255349323300113e-02, 
-            -5.2058533856701528e-03,
-            -2.5659488140401731e-03, 
-            -8.9320087280166040e-04,
-            -1.4789370573431722e-02]
+            
+    markers: 127                         # Number of markes
 
-    #markers: 127                        # Number of markers in a TacTip frame
-    markers: 51 #105
+    mm2pxl: 10                          # conversion millimeters to pixel in a frame
 
-image_processing:                   # Params for Image Processing
-    # ############
-    # - TacTip
-    # ############
-    #shape:                          # Reshaped image dimension
-    #    width: 640
-    #    height: 480
-    #mask: [310,240,190]             # Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: None)  
-    #blur_kernel_size: [5,5]         # Image noise filtering (Gaussian) kernel size   
-    #blob_recog:                     # Determinant of Heussian Blob's recogition params (TacTip: 6.5,8.5,0.003, DigiTac: ??)
-    #    min_sigma: 6.5              #   - minimum blob width
-    #    max_sigma: 8.5              #   - maximum blob width
-    #    threshold: 0.001            #   - intensity changes threshold
-
-    # ##################
-    # - DigiTac v1.5
-    # ##################
+# ===========================================================
+# - Image processing parameters
+# ===========================================================
+image_processing:     
     shape:                          # Reshaped image dimension
         width: 640
         height: 480
-    mask: None #[310,240,190]             # Image mask (u,v,radius), (TacTip: 925,540,420, DigiTac: None)  
-    blur_kernel_size: 5             # Image noise filtering (Gaussian) kernel size  
 
+    mask: circle                   # Image mask  
+    
+    blur_kernel_size: 5             # Image noise filtering (Gaussian) kernel size  
+    
     circle_recog:                   # Hough Gradient Circle recogition params
-        min_radius: 7               #   - min circle radius
-        max_radius: 12              #   - min circle radius
-        param1: 250                 #   - Upper threshold for the internal Canny edge detecto
-        param2: 8                   #   - Threshold for center detection
-        min_distance: 27            #   - min distance of adjacent circle
+        min_radius: 1               #   - min circle radius
+        max_radius: 10              #   - min circle radius
+        param1: 100                 #   - Upper threshold for the internal Canny edge detecto
+        param2: 5                   #   - Threshold for center detection
+        min_distance: 10            #   - min distance of adjacent circle    
+
 
     blob_recog:                     # Determinant of Heussian Blob's recogition params (TacTip: 6.5,8.5,0.003, DigiTac: ??)
-        min_sigma: 10.5             #   - minimum blob width
-        max_sigma: 11.5             #   - maximum blob width
-        threshold: 0.005            #   - intensity changes threshold
+        min_sigma: 5                #   - minimum blob width
+        max_sigma: 7.5              #   - maximum blob width
+        threshold: 0.05             #   - intensity changes threshold
+        
 
+
+# ===========================================================
+# - Gaussian Kernel Density Estimation algorithm parameters
+# ===========================================================
 markers_density:            # Params for Gaussian Kernel Algorithm
-    # ############
-    # - TacTip
-    # ############
     rate: 50                # rate [Hz]  
     gaussian_kernel:        # Density Estimator Gaussian Kernel 
-        h: 30               #   - Density Estimator Gaussian Kernel std. dev, (TacTip: 15, DigiTac: 30)  
+        h: 15               #   - Density Estimator Gaussian Kernel std. dev, (TacTip: 15, DigiTac: 30)  
                             #     (it should be close to mean distance in pixels between adjacent markers)                                    
         verbose: True       #   - Print kernel estimation elapsed time 
     resolution: 1           # Resolution of pixels for Density estimation
                             # i.e. d(u,v) = density[u//resolution,v//resolution]
-    #threshold: 0.3          # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
-    threshold: 0.01          # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
-    fit:              # Stiffness params for deformation estimate. def = a*vol+b*vol^2
-        type: quadratic
-        #a: -0.2112          #   - linear parameter (norm to r)
-        #b: 4.1014           #   - quadratic parameter (norm to r)
+    threshold: 0.02         # Maximum density variation allowed in a pixel before contact detection [1/mm^2]
+    fit:                    # Stiffness params for deformation estimation. def = h(vol)
+        type: quadratic     # type of curve (i.e linear, quadratic, power, logarithmic)   
+        #a: -0.2112         #   - linear parameter (norm to r)
+        #b: 4.1014          #   - quadratic parameter (norm to r)
         #a: 0.00044         #   - linear parameter (no norm)
         #b: -7.426e-9       #   - quadratic parameter (no norm)
-        a: 1.0725           #   - linear parameter (in mm)
-        b:  -0.0500         #   - quadratic parameter (in mm)
+        #a: 1.0725           #   - linear parameter (in mm)
+        #b:  -0.0500         #   - quadratic parameter (in mm)
+        a: 0.76873
+        b: 0.0073294
 
+
+# ========================================================
+# - Voronoi cell algorithm parameters
+# ========================================================
 markers_volume:         # Params for Voronoi Algorithm 
-    # ############
-    # - TacTip
-    # ############
     rate: 30                    # rate [Hz]  
     voronoi:                    # Volume voronoi cell     
         vertices: [[305,50],    #   - List of points to delimit area with markers  
@@ -91,8 +80,8 @@ markers_volume:         # Params for Voronoi Algorithm
         verbose: True           #   - Print area evaluation elapsed time 
     resolution: 1               # Resolution of pixels for Density estimation 
                                 # i.e. d(u,v) = density[u//resolution,v//resolution]
-    threshold: 50              # Maximum volume variation allowed in a pixel before contact detection [1/mm^2]
-    fit:                  # Stiffness params for deformation estimate. def = a*vol+b*vol^2
+    threshold: 50               # Maximum volume variation allowed in a pixel before contact detection [1/mm^2]
+    fit:                        # Stiffness params for deformation estimate. def = a*vol+b*vol^2
         type: quadratic
         a: 1.179                #   - linear parameter 
         b: -0.09304             #   - quadratic parameter

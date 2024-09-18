@@ -176,6 +176,159 @@
                             <subscriber_queue_size>100</subscriber_queue_size>
                             <title>Force z [N]</title>
                         </curve_2>
+                        <curve_3>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/filtered/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>wrench/force/x</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/filtered/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#000000</custom_color>
+                                <type>0</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>1</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>Force x filtered [N]</title>
+                        </curve_3>
+                        <curve_4>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/filtered/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>wrench/force/y</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/filtered/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#000000</custom_color>
+                                <type>0</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>1</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>Force y filtered [N]</title>
+                        </curve_4>
+                        <curve_5>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/filtered/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>wrench/force/z</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/filtered/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#000000</custom_color>
+                                <type>0</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>1</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>Force z filtered [N]</title>
+                        </curve_5>
                     </curves>
                     <legend>
                         <visible>true</visible>
@@ -248,7 +401,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>Torque x [Nmm]</title>
+                            <title>Torque x [Nm]</title>
                         </curve_0>
                         <curve_1>
                             <axes>
@@ -299,7 +452,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>Torque y [Nmm]</title>
+                            <title>Torque y [Nm]</title>
                         </curve_1>
                         <curve_2>
                             <axes>
@@ -350,7 +503,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>Torque z [Nmm]</title>
+                            <title>Torque z [Nm]</title>
                         </curve_2>
                     </curves>
                     <legend>
@@ -535,7 +688,7 @@
                         <visible>true</visible>
                     </legend>
                     <plot_rate>30</plot_rate>
-                    <title>SITS Point of Contact [mm]</title>
+                    <title>SITS Contact Centroid [mm]</title>
                 </column_0>
                 <column_1>
                     <axes>
@@ -868,11 +1021,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/soft_csp/solution</topic>
-                                    <type>its_msgs/SoftContactSensingProblemSolution</type>
+                                    <topic>/ft_sensor_franka/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>T</field>
+                                    <field>wrench/torque/x</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -881,8 +1034,8 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/soft_csp/solution</topic>
-                                    <type>its_msgs/SoftContactSensingProblemSolution</type>
+                                    <topic>/ft_sensor_franka/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
                                 </y_axis>
                             </axes>
                             <color>
@@ -905,14 +1058,116 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>T</title>
+                            <title>Torque x [Nmm]</title>
                         </curve_0>
+                        <curve_1>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_franka/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>wrench/torque/y</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_franka/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#000000</custom_color>
+                                <type>0</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>1</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>Torque y [Nmm]</title>
+                        </curve_1>
+                        <curve_2>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_franka/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>wrench/torque/z</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_franka/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#000000</custom_color>
+                                <type>0</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>1</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>Torque z [Nmm]</title>
+                        </curve_2>
                     </curves>
                     <legend>
                         <visible>true</visible>
                     </legend>
                     <plot_rate>30</plot_rate>
-                    <title>SITS Torque [Nmm]</title>
+                    <title>ATI Torque - (Franka)</title>
                 </column_1>
             </row_2>
             <row_3>
@@ -1106,7 +1361,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>x Force</title>
+                            <title>Force x [N]</title>
                         </curve_0>
                         <curve_1>
                             <axes>
@@ -1157,7 +1412,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>y Force</title>
+                            <title>Force y [N]</title>
                         </curve_1>
                         <curve_2>
                             <axes>
@@ -1208,14 +1463,65 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>z Force</title>
+                            <title>Force z [N]</title>
                         </curve_2>
+                        <curve_3>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>wrench/force/z</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/ft_sensor_tactip/netft_data</topic>
+                                    <type>geometry_msgs/WrenchStamped</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#000000</custom_color>
+                                <type>0</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>1</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>Untitled Curve</title>
+                        </curve_3>
                     </curves>
                     <legend>
                         <visible>true</visible>
                     </legend>
                     <plot_rate>30</plot_rate>
-                    <title>ATI Force - GT (Franka)</title>
+                    <title>ATI Force - (Franka)</title>
                 </column_1>
             </row_3>
         </plots>

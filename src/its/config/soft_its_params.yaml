@@ -9,48 +9,50 @@ fingertip:
   # ############
   #id: TacTip                # Fingertip name id
   #displacement:             # Displacement [mm] Fingertip Frame {B} w.r.t Sensor Frame {S}
-  #    x: .0                 
-  #    y: .0
-  #    z: 90
+  #    x: .0                 #   .0   |  .0     | .0
+  #    y: .0                #   .0   |  28.3   | 56.9
+  #    z: 105               #   105  |  145    | 142.4
   #orientation:              # Orientation [rad] Fingertip Frame {B} w.r.t Sensor Frame {S} in Roll-Pitch-Yaw encoding
-  #    roll: .0
-  #    pitch: .0
-  #    yaw: .0
+  #    roll: .0             #   .0   |  -0.261799 (15deg)  | -0.523599 (30deg)
+  #    pitch: .0             #   .0   |  .0                 | .0
+  #    yaw: .0               #   .0   |  .0                 | .0
   #principalSemiAxis:        # Fingertip Surfaces principal Semi-Axis
   #    a: 20                 # - Along x-axis of {B}, [mm]
   #    b: 20                 # - Along y-axis of {B}, [mm]
   #    c: 20                 # - Along z-axis of {B}, [mm]
   #stiffnessType:            # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2
-  #    a: 0.08384            # - linear coeff. [N/mm] 
+  #    a: 0.018971           # - linear coeff. [N/mm] 
   #                          #   (0.08384/0.06999)
-  #    b: 0.0                # - quadratic coeff. [N/mm^2]
-                            #   (0.0/0.004296)
+  #    b: 0.02197            # - quadratic coeff. [N/mm^2]
+  #                          #   (0.0/0.004296)
   # #################
   # - DigiTac v1.5
   # #################
   id: DigiTac v1.5          # Fingertip name id
-
+  
   displacement:             # Displacement [mm] Fingertip Frame {B} w.r.t Sensor Frame {S}
       x: .0                 #   .0   |  .0    | .0
-      y: 1.5                  #   1.5  |  5   | .0
-      z: 40                 #   40   |  50    | 60
+      y: 1                #   1.5  |  4     | 1
+      z: 58                 #   40   |  50    | 58
   orientation:              # Orientation [rad] Fingertip Frame {B} w.r.t Sensor Frame {S} in Roll-Pitch-Yaw encoding
-      roll: .0              #   .0   |  -0.261799 (15deg)  | -0.523599 (30deg)
+      roll: -0.523599              #   .0   |  -0.261799 (15deg)  | -0.523599 (30deg)
       pitch: .0             #   .0   |  .0                 | .0
       yaw: .0               #   .0   |  .0                 | .0
   principalSemiAxis:                # Fingertip Surfaces principal Semi-Axis
       a: 15.110254096105802         
       b: 18.489684621717174         
       c: 4.737196072702191   
-
+  
       #a: 14.159785527280802         # - Along x-axis of {B}, [mm]
       #b: 16.353872888532234         # - Along y-axis of {B}, [mm]
       #c: 3.746242642709123          # - Along z-axis of {B}, [mm]       
-  stiffnessType:                    # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2
-      a: 0.2275                     # - linear coeff. [N/mm]
-                                    #   (0.3143/0.2275)
-      b: 0.0349                     # - quadratic coeff. [N/mm^2]
-                                    #   (0.0/0.0349)
+  stiffnessType:                     # Fingertip Surfaces stiffness model: F = a*Dd + b*Dd^2
+      a: 0.36162                     # - linear coeff. [N/mm]
+                                     #   (0.3143/0.2275)
+      b: 0.052583                    # - quadratic coeff. [N/mm^2]
+                                     #   (0.0/0.0349)
+
+
    ##################
   # - Versione prova
   # ##################
@@ -95,23 +97,25 @@ fingertip:
 # ====================================================
 sensor:
   #id: ft_sensor             # F/T Sensor name id
-  id: ft_sensor_tactip     # F/T Sensor name id with 2 sensor config
+  #id: ft_sensor_tactip     # F/T Sensor name id with 2 sensor config
+  #id: ft_sensor_franka     # F/T Sensor name id with 2 sensor config
+  id: ft_sensor_tactip/filtered     # F/T Sensor name id with 2 sensor config
 
 
 # ====================================================
 # - Solver parameters
 # ====================================================
 soft_its:
-  rate: 100                                  # Rate of node in [Hz]
-  algorithm:                                # Soft Intrinsic Tactile Sensing solver
-    verbose: false                          # print output on each step
-    #force_threshold: 0.5                    # Force threshold to enable solver [N]
-    force_threshold: 0.5                    # Force threshold to enable solver [N]
+  rate: 100                                # Rate of node in [Hz]
+  algorithm:                               # Soft Intrinsic Tactile Sensing solver
+    verbose: true                             # print output on each step
+    #force_threshold: 0.5                     # Force threshold to enable solver [N]
+    force_threshold: 0.1                    # Force threshold to enable solver [N]
     method: 
-        name: Levenberg-Marquardt           # solver method (Default Levenberg-Marquardt)
+        #name: Levenberg-Marquardt            # solver method (Default Levenberg-Marquardt)
         #name: Gauss-Newton           
-        #name: Closed-Form           
+        name: Closed-Form           
         params:
-            count_max: 500                  # num of max iteration until forced stop
-            stop_threshold: 0.001           # Xi_square threshold for convergence condition 
-            epsilon: 0.001                  # Lavenberg-Marquantd updating param of lambda
+            count_max: 500                    # num of max iteration until forced stop
+            stop_threshold: 0.001             # Xi_square threshold for convergence condition 
+            epsilon: 0.001                    # Lavenberg-Marquantd updating param of lambda

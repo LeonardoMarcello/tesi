@@ -79,7 +79,7 @@ namespace fingertip {
             std::string id;                             // Fingertip name
 
 			Eigen::Matrix3d orientation;                // Fingertip Frame {B} orientation w.r.t Sensor frame {S}
-			Eigen::Vector3d displacement;               // Fingertip Frame {B} displacement w.r.t Sensor frame {S}
+			Eigen::Vector3d displacement;               // Fingertip Frame {B} displacement [mm] w.r.t Sensor frame {S}
             
             Surface model;                              // Fingertip surface model            
     };

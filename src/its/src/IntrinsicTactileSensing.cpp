@@ -106,7 +106,12 @@ int IntrinsicTactileSensing::solveContactSensingProblemLM(ContactSensingProblemS
     tmp = R_sb*(m + f.cross(d_sb/1000.0));     // Torque Measure [Nm] w.r.t Fingertip Frame, {B}
     const double mx = tmp(0)*1000.0;           // converting in [Nmm]
     const double my = tmp(1)*1000.0;
-    const double mz = tmp(2)*1000.0;
+    const double mz = tmp(2)*1000.0;   
+    
+    // store measure
+    this->f = {fx,fy,fz};                // [N]
+    this->m = {mx,my,mz};                // [Nm]
+
     // LM Algorithm params
     double lambda = 100;                // init damping parameter 
 
@@ -238,7 +243,11 @@ int IntrinsicTactileSensing::solveContactSensingProblemGN(ContactSensingProblemS
     tmp = R_sb*(m + f.cross(d_sb/1000.0));     // Torque Measure [Nm] w.r.t Fingertip Frame, {B}
     const double mx = tmp(0)*1000.0;           // converting in [Nmm]
     const double my = tmp(1)*1000.0;
-    const double mz = tmp(2)*1000.0;
+    const double mz = tmp(2)*1000.0;   
+    
+    // store measure
+    this->f = {fx,fy,fz};                // [N]
+    this->m = {mx,my,mz};                // [Nm]
 
     // Contact Problem Sensing definition
     Eigen::VectorXd g(4);                                       // contact problem function. g(x) = 0
@@ -362,6 +371,10 @@ int IntrinsicTactileSensing::solveContactSensingProblemCF(Eigen::Vector3d f, Eig
     const double tz = tmp(2)*1000.0;
     const Eigen::Vector3d t =  {tx, ty, tz};
 
+    // Store measure 
+    this->f = p;    // Force [N]
+    this->m = t;    // Torque [Nm]
+
 	alpha = a;
 	beta = b;
 	gamma = c;
@@ -431,7 +444,7 @@ ExtendedContactSensingProblemSolution IntrinsicTactileSensing::getExtendedSoluti
 void IntrinsicTactileSensing::contact_sensing_problem(double *x, double *g, int m, int n, void *data){
     double fx,fy,fz,mx,my,mz,a,b,c;    
     double input[9];
-	memcpy(&input,data,9*sizeof(double));
+	memcpy(&input, data, 9*sizeof(double));
     fx = input[0]; fy = input[1]; fz = input[2]; 
     mx = input[3]; my = input[4]; mz = input[5];
     a = input[6]; b = input[7]; c = input[8]; 
@@ -446,7 +459,7 @@ void IntrinsicTactileSensing::contact_sensing_problem(double *x, double *g, int 
 void IntrinsicTactileSensing::jacobian_contact_sensing_problem(double *x, double *jac, int m, int n, void *data){
     double fx,fy,fz,mx,my,mz,a,b,c;    
     double input[9];
-	memcpy(&input,data,9*sizeof(double));
+	memcpy(&input, data, 9*sizeof(double));
     fx = input[0]; fy = input[1]; fz = input[2]; 
     mx = input[3]; my = input[4]; mz = input[5];
     a = input[6]; b = input[7]; c = input[8]; 
@@ -503,6 +516,10 @@ int IntrinsicTactileSensing::solveContactSensingProblemOptim(ContactSensingProbl
     const double ty = tmp(1)*1000.0;
     const double tz = tmp(2)*1000.0;
     const Eigen::Vector3d t =  {tx, ty, tz};
+
+    // Store measure 
+    this->f = p;    // Force [N]
+    this->m = t;    // Torque [Nm]
 
     // Set variable for LM solver 
     double x[4] = {X0.c(0),X0.c(1),X0.c(2),X0.K};                   // initial guess x0

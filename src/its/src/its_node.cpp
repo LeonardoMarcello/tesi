@@ -42,7 +42,7 @@ void igCallback(const its_msgs::SoftContactSensingProblemSolution::ConstPtr& msg
   double norm = ITS.fingertip.model.getNormal(X0.c(0), X0.c(1), X0.c(2)).norm();
   X0.K = msg->T/norm;
 
-  ROS_INFO("New Initial Guess setted");
+  //ROS_INFO("New Initial Guess setted");
 }
 
 

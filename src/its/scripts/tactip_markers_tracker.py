@@ -6,6 +6,8 @@ import threading
 from its_msgs.msg import Point2D, TacTipMarkers
 from sensor_msgs.msg import Image
 
+from std_srvs.srv import Empty, EmptyResponse
+
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
@@ -43,7 +45,7 @@ class TacTipMarkersTracker:
         
         # Variables
         self.markers  = None                        # Markers Positions as numpy array
-        self.colors = 255*np.random.rand(127,3)     # Markers centroid visualize color
+        self.colors = 255*np.random.rand(200,3)     # Markers centroid visualize color
         self.bridge = CvBridge()                    # Ros to OpenCV Image Converter
         self.image = None                           # Current Raw TacTip Image
         self.old_image = None                       # Last Raw TacTip Image (used in Optic Flow evale)
@@ -56,6 +58,9 @@ class TacTipMarkersTracker:
         # Publisher to Markers tracker
         self.data_publisher = rospy.Publisher("tactip/markers_tracker", TacTipMarkers, queue_size=10)
         self.processed_image_publisher = rospy.Publisher("usb_cam/image_processed", Image, queue_size=10)
+
+        # Services
+        self.calibrate = rospy.Service("markers_tracker/manual_select_markers", Empty, self.handle_calibrate)
         
 
         # Initialize Thread
@@ -72,7 +77,16 @@ class TacTipMarkersTracker:
     ##################
     # CALLBACKs
     ##################
+
+    def handle_calibrate(self, request):  
+        """
+        handle_calibrate: 
+            Reset markes centroid position array to start a new manual selection.
+        """            
+        self.markers = None
+        return EmptyResponse()
     
+
     def tactip_callback(self, image_msg):
         """
         tactip_callback: 
@@ -94,7 +108,7 @@ class TacTipMarkersTracker:
     def imageProcessing(self, src, gaussian_kernel_size = (5,5), resize_shape = (640,480), mask=True, mask_radius = 420, mask_u_center = 925, mask_v_center = 540):
         """
         imageProcessing: 
-            Elaborates raw image to enhance vision alghoritms.
+            Elaborates raw image to enhance vision alghoritms. It works on DigiTac.
             return elaborated image
         """
         # resize image
@@ -147,7 +161,52 @@ class TacTipMarkersTracker:
         #(thresh, frame_base_bw) = cv2.threshold(frame_base_gray, 1, 235, cv2.THRESH_BINARY_INV)
         
         return processed_frame
+    
+    
+    def deepImageProcessing(self, src):
+        """
+        deepImageProcessing: 
+            Elaborates raw image to enhance vision alghoritms by converting into LAB scale, sharpening,
+            appling the otsu thresholding and masking out outer zone. It works on TacTip.
+            return elaborated image
+        """
+        processed_frame = src.copy()
+        
+        # convert into LAB scale
+        lab_frame = cv2.cvtColor(processed_frame, cv2.COLOR_RGB2LAB)
+        processed_frame = lab_frame
+        
+        # sharpening
+        lookUpTable = np.empty((1, 256), np.uint8)
+        gamma = 0.4
+        for i in range(256):
+            lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
+        res = cv2.LUT(processed_frame, lookUpTable)
+        processed_frame = res
+        processed_frame = cv2.medianBlur(processed_frame, 5)
+        processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_LAB2RGB)
 
+        # apply otsu thresholdin
+        _, thresh_otsu = cv2.threshold(cv2.cvtColor(processed_frame, cv2.COLOR_RGB2GRAY),
+                                    155,  # thresh value
+                                    255,  # Max value
+                                    cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        
+        # apply circular mask
+        # Full image
+        # radius = 422
+        # yc = 540
+        # xc = 925
+        # resized image
+        radius = 190
+        yc = 240
+        xc = 305
+        mask = 255 * np.ones_like(thresh_otsu)
+        mask = cv2.circle(mask, (xc, yc), radius, (0, 0, 0), -1)
+        pp_img = cv2.bitwise_or(thresh_otsu, mask)
+
+        return pp_img
 
     def markerDetection(self, src, params):
         """
@@ -276,13 +335,13 @@ class TacTipMarkersTracker:
                 # 1) read raw images
                 raw_image = self.image.copy()
                 raw_image_stamp = self.image_stamp
-                self.image = None
                 
                 # 2) Processing images (elap time ca 1 ms)
                 processed_image = self.imageProcessing(raw_image,
                                                         resize_shape=self.rshape,
                                                         gaussian_kernel_size = self.blur_kernel_size,
                                                         mask=self.mask)
+                #processed_image = self.deepImageProcessing(raw_image)
                     
                 # 3) Markers detection (elap time ca 20 ms)
                 if self.markers is None:
